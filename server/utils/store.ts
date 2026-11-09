@@ -10,26 +10,121 @@ import type {
   Venue,
 } from '../../shared/types'
 
+/**
+ * Eagerly bundle JSON seeds into the server build.
+ * Required on Vercel: filesystem `data/` is not available in the lambda unless traced.
+ */
+const organizationModules = import.meta.glob('../../data/organizations/*.json', { eager: true })
+const venueModules = import.meta.glob('../../data/venues/*.json', { eager: true })
+const eventModules = import.meta.glob('../../data/events/*.json', { eager: true })
+const itemModules = import.meta.glob('../../data/items/*.json', { eager: true })
+
 const dataRoot = path.join(process.cwd(), 'data')
 
-async function readJson<T>(filePath: string): Promise<T> {
-  const raw = await fs.readFile(filePath, 'utf8')
-  return JSON.parse(raw) as T
-}
+/** Ephemeral write overlay for serverless (lost on cold start). Local fs writes still preferred. */
+const memoryOverlay = new Map<string, unknown>()
 
-async function writeJson(filePath: string, value: unknown) {
-  const tmp = `${filePath}.tmp`
-  await fs.writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
-  await fs.rename(tmp, filePath)
-}
-
-async function listJsonFiles(dir: string) {
-  try {
-    const entries = await fs.readdir(dir)
-    return entries.filter((name) => name.endsWith('.json')).map((name) => path.join(dir, name))
-  } catch {
-    return []
+function unwrap<T>(mod: unknown): T {
+  if (mod && typeof mod === 'object' && 'default' in mod) {
+    return (mod as { default: T }).default
   }
+  return mod as T
+}
+
+function fileKeyFromGlob(globPath: string) {
+  // e.g. ../../data/organizations/river-valley.json -> organizations/river-valley.json
+  const marker = '/data/'
+  const idx = globPath.replace(/\\/g, '/').lastIndexOf(marker)
+  if (idx === -1) return globPath.split('/').slice(-2).join('/')
+  return globPath.replace(/\\/g, '/').slice(idx + marker.length)
+}
+
+function clone<T>(value: T): T {
+  return structuredClone(value)
+}
+
+function loadGlobMap<T>(modules: Record<string, unknown>) {
+  const map = new Map<string, T>()
+  for (const [globPath, mod] of Object.entries(modules)) {
+    map.set(fileKeyFromGlob(globPath), unwrap<T>(mod))
+  }
+  return map
+}
+
+const seededOrganizations = loadGlobMap<Organization>(organizationModules)
+const seededVenues = loadGlobMap<Venue>(venueModules)
+const seededEvents = loadGlobMap<EventRecord>(eventModules)
+const seededItems = loadGlobMap<ItemLibrary>(itemModules)
+
+async function readJsonFile<T>(relativeKey: string): Promise<T | null> {
+  if (memoryOverlay.has(relativeKey)) {
+    return clone(memoryOverlay.get(relativeKey) as T)
+  }
+
+  // Local/dev: prefer live filesystem so admin edits persist across reloads
+  try {
+    const raw = await fs.readFile(path.join(dataRoot, relativeKey), 'utf8')
+    return JSON.parse(raw) as T
+  } catch {
+    // fall through to bundled seed
+  }
+
+  const seeded =
+    seededOrganizations.get(relativeKey)
+    ?? seededVenues.get(relativeKey)
+    ?? seededEvents.get(relativeKey)
+    ?? seededItems.get(relativeKey)
+  return seeded ? clone(seeded as T) : null
+}
+
+async function writeJson(relativeKey: string, value: unknown) {
+  memoryOverlay.set(relativeKey, clone(value))
+  try {
+    const filePath = path.join(dataRoot, relativeKey)
+    await fs.mkdir(path.dirname(filePath), { recursive: true })
+    const tmp = `${filePath}.tmp`
+    await fs.writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
+    await fs.rename(tmp, filePath)
+  } catch {
+    // Serverless / read-only FS: memory overlay still serves subsequent reads on this instance
+  }
+}
+
+async function listJsonKeys(subdir: string): Promise<string[]> {
+  const prefix = `${subdir}/`
+  const keys = new Set<string>()
+
+  for (const key of memoryOverlay.keys()) {
+    if (key.startsWith(prefix) && key.endsWith('.json')) keys.add(key)
+  }
+
+  try {
+    const entries = await fs.readdir(path.join(dataRoot, subdir))
+    for (const name of entries) {
+      if (name.endsWith('.json')) keys.add(`${subdir}/${name}`)
+    }
+  } catch {
+    // ignore missing dir on serverless
+  }
+
+  const seeded =
+    subdir === 'organizations'
+      ? seededOrganizations
+      : subdir === 'venues'
+        ? seededVenues
+        : subdir === 'events'
+          ? seededEvents
+          : subdir === 'items'
+            ? seededItems
+            : null
+
+  if (seeded) {
+    for (const key of seeded.keys()) {
+      if (key.startsWith(prefix) && key.endsWith('.json')) keys.add(key)
+    }
+  }
+
+  return [...keys].sort()
 }
 
 function newId(prefix: string) {
@@ -37,42 +132,37 @@ function newId(prefix: string) {
 }
 
 export async function listOrganizations(): Promise<Organization[]> {
-  const files = await listJsonFiles(path.join(dataRoot, 'organizations'))
-  return Promise.all(files.map((file) => readJson<Organization>(file)))
+  const keys = await listJsonKeys('organizations')
+  const orgs = await Promise.all(keys.map((key) => readJsonFile<Organization>(key)))
+  return orgs.filter((org): org is Organization => Boolean(org))
 }
 
 export async function getOrganization(slug: string): Promise<Organization | null> {
-  try {
-    return await readJson<Organization>(path.join(dataRoot, 'organizations', `${slug}.json`))
-  } catch {
-    return null
-  }
+  return readJsonFile<Organization>(`organizations/${slug}.json`)
 }
 
 export async function listVenues(organizationId?: string): Promise<Venue[]> {
-  const files = await listJsonFiles(path.join(dataRoot, 'venues'))
-  const venues = await Promise.all(files.map((file) => readJson<Venue>(file)))
+  const keys = await listJsonKeys('venues')
+  const venues = (await Promise.all(keys.map((key) => readJsonFile<Venue>(key)))).filter(
+    (venue): venue is Venue => Boolean(venue),
+  )
   return organizationId
     ? venues.filter((venue) => venue.organizationId === organizationId)
     : venues
 }
 
 export async function getVenue(orgSlug: string, venueSlug: string): Promise<Venue | null> {
-  try {
-    return await readJson<Venue>(
-      path.join(dataRoot, 'venues', `${orgSlug}__${venueSlug}.json`),
-    )
-  } catch {
-    return null
-  }
+  return readJsonFile<Venue>(`venues/${orgSlug}__${venueSlug}.json`)
 }
 
 export async function listEvents(opts?: {
   organizationId?: string
   venueId?: string
 }): Promise<EventRecord[]> {
-  const files = await listJsonFiles(path.join(dataRoot, 'events'))
-  const events = await Promise.all(files.map((file) => readJson<EventRecord>(file)))
+  const keys = await listJsonKeys('events')
+  const events = (await Promise.all(keys.map((key) => readJsonFile<EventRecord>(key)))).filter(
+    (event): event is EventRecord => Boolean(event),
+  )
   return events.filter((event) => {
     if (opts?.organizationId && event.organizationId !== opts.organizationId) return false
     if (opts?.venueId && event.venueId !== opts.venueId) return false
@@ -85,36 +175,22 @@ export async function getEventBySlugs(
   venueSlug: string,
   eventSlug: string,
 ): Promise<EventRecord | null> {
-  try {
-    return await readJson<EventRecord>(
-      path.join(dataRoot, 'events', `${orgSlug}__${venueSlug}__${eventSlug}.json`),
-    )
-  } catch {
-    return null
-  }
+  return readJsonFile<EventRecord>(`events/${orgSlug}__${venueSlug}__${eventSlug}.json`)
 }
 
 export async function getEventFilePath(event: EventRecord, orgSlug: string, venueSlug: string) {
-  return path.join(dataRoot, 'events', `${orgSlug}__${venueSlug}__${event.slug}.json`)
-}
-
-function itemsPath(orgSlug: string) {
-  return path.join(dataRoot, 'items', `${orgSlug}.json`)
+  return `events/${orgSlug}__${venueSlug}__${event.slug}.json`
 }
 
 export async function getItemLibrary(orgSlug: string): Promise<ItemLibrary | null> {
   const org = await getOrganization(orgSlug)
   if (!org) return null
-  try {
-    return await readJson<ItemLibrary>(itemsPath(orgSlug))
-  } catch {
-    return { organizationId: org.id, items: [] }
-  }
+  const library = await readJsonFile<ItemLibrary>(`items/${orgSlug}.json`)
+  return library ?? { organizationId: org.id, items: [] }
 }
 
 export async function saveItemLibrary(orgSlug: string, library: ItemLibrary) {
-  await fs.mkdir(path.join(dataRoot, 'items'), { recursive: true })
-  await writeJson(itemsPath(orgSlug), library)
+  await writeJson(`items/${orgSlug}.json`, library)
   return library
 }
 

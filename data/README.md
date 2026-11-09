@@ -2,6 +2,8 @@
 
 Lite persistence for the Nuxt scaffold. Files are the source of truth until Postgres lands.
 
+On **Vercel**, JSON is bundled into the server via `import.meta.glob` (and `nitro.serverAssets`). The lambda filesystem is read-only, so admin writes use an in-memory overlay for that instance only—redeploys restore seed files.
+
 | Path | Contents |
 | --- | --- |
 | `organizations/{slug}.json` | Org meta + branding |
