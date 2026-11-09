@@ -22,10 +22,20 @@ const createTitle = ref('')
 const cloneSourceSlug = ref('')
 const actionError = ref('')
 
-const sortedEvents = computed(() =>
-  [...(data.value?.events ?? [])].sort((a, b) =>
-    a.systemName.localeCompare(b.systemName) || a.title.localeCompare(b.title),
-  ),
+function sortEvents(events: EventRecord[]) {
+  return [...events].sort(
+    (a, b) => a.systemName.localeCompare(b.systemName) || a.title.localeCompare(b.title),
+  )
+}
+
+const sortedEvents = computed(() => sortEvents(data.value?.events ?? []))
+
+const activeEvents = computed(() =>
+  sortEvents((data.value?.events ?? []).filter((event) => event.status !== 'ended')),
+)
+
+const pastEvents = computed(() =>
+  sortEvents((data.value?.events ?? []).filter((event) => event.status === 'ended')),
 )
 
 function formatTimes(venue: Venue) {
@@ -43,11 +53,33 @@ function openCreate() {
   showCreate.value = true
 }
 
-function openCloneModal() {
+function openCloneModal(sourceSlug?: string) {
   actionError.value = ''
   showCreate.value = false
-  cloneSourceSlug.value = sortedEvents.value[0]?.slug ?? ''
+  cloneSourceSlug.value =
+    sourceSlug
+    || activeEvents.value[0]?.slug
+    || pastEvents.value[0]?.slug
+    || ''
   showCloneModal.value = true
+}
+
+async function cloneEventBySlug(slug: string) {
+  cloning.value = true
+  actionError.value = ''
+  try {
+    const result = await $fetch<{ event: EventRecord; path: string }>(
+      `/api/events/${orgSlug.value}/${venueSlug.value}/${slug}/clone`,
+      { method: 'POST' },
+    )
+    closeCloneModal()
+    await refresh()
+    await router.push(result.path)
+  } catch (e) {
+    actionError.value = e instanceof Error ? e.message : 'Clone failed'
+  } finally {
+    cloning.value = false
+  }
 }
 
 function closeCloneModal() {
@@ -90,21 +122,7 @@ async function confirmClone() {
     actionError.value = 'Choose an event to clone'
     return
   }
-  cloning.value = true
-  actionError.value = ''
-  try {
-    const result = await $fetch<{ event: EventRecord; path: string }>(
-      `/api/events/${orgSlug.value}/${venueSlug.value}/${cloneSourceSlug.value}/clone`,
-      { method: 'POST' },
-    )
-    closeCloneModal()
-    await refresh()
-    await router.push(result.path)
-  } catch (e) {
-    actionError.value = e instanceof Error ? e.message : 'Clone failed'
-  } finally {
-    cloning.value = false
-  }
+  await cloneEventBySlug(cloneSourceSlug.value)
 }
 </script>
 
@@ -129,6 +147,8 @@ async function confirmClone() {
       </div>
     </header>
 
+    <p v-if="actionError" class="error page-error">{{ actionError }}</p>
+
     <section class="card">
       <div class="card-head">
         <h2>Events</h2>
@@ -137,15 +157,13 @@ async function confirmClone() {
             type="button"
             class="btn ghost sm"
             :disabled="!sortedEvents.length"
-            @click="openCloneModal"
+            @click="openCloneModal()"
           >
             Clone flow
           </button>
           <button type="button" class="btn sm" @click="openCreate">Create new</button>
         </div>
       </div>
-
-      <p v-if="actionError" class="error">{{ actionError }}</p>
 
       <div v-if="showCreate" class="create-panel">
         <label>
@@ -174,21 +192,67 @@ async function confirmClone() {
         </div>
       </div>
 
-      <p v-if="!sortedEvents.length" class="empty">No events yet for this venue.</p>
+      <p v-if="!activeEvents.length" class="empty">No active events yet for this venue.</p>
       <ul v-else class="events">
-        <li v-for="event in sortedEvents" :key="event.id">
+        <li v-for="event in activeEvents" :key="event.id">
           <span>
             <strong>{{ event.systemName }}</strong>
             <span class="meta">
               Guest: {{ event.title }} · {{ event.status }} · {{ event.slug }}
             </span>
           </span>
-          <NuxtLink
-            class="btn ghost sm"
-            :to="`/admin/o/${orgSlug}/v/${venueSlug}/e/${event.slug}/flow`"
-          >
-            Flow builder
-          </NuxtLink>
+          <div class="row-actions">
+            <button
+              type="button"
+              class="btn ghost sm"
+              :disabled="cloning"
+              @click="cloneEventBySlug(event.slug)"
+            >
+              Clone
+            </button>
+            <NuxtLink
+              class="btn ghost sm"
+              :to="`/admin/o/${orgSlug}/v/${venueSlug}/e/${event.slug}/flow`"
+            >
+              Flow builder
+            </NuxtLink>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <section class="card past-card">
+      <div class="card-head">
+        <h2>Past events</h2>
+      </div>
+      <p class="card-lede">
+        Past flows stay available to clone, but can’t be edited.
+      </p>
+      <p v-if="!pastEvents.length" class="empty">No past events yet.</p>
+      <ul v-else class="events">
+        <li v-for="event in pastEvents" :key="event.id">
+          <span>
+            <strong>{{ event.systemName }}</strong>
+            <span class="meta">
+              Guest: {{ event.title }} · {{ event.status }} · {{ event.slug }}
+            </span>
+          </span>
+          <div class="row-actions">
+            <NuxtLink
+              class="btn ghost sm"
+              :to="`/admin/o/${orgSlug}/v/${venueSlug}/e/${event.slug}/flow`"
+            >
+              View
+            </NuxtLink>
+            <button
+              type="button"
+              class="btn sm"
+              :disabled="cloning"
+              @click="cloneEventBySlug(event.slug)"
+            >
+              Clone
+            </button>
+          </div>
         </li>
       </ul>
     </section>
@@ -213,9 +277,16 @@ async function confirmClone() {
           <span>Event</span>
           <select v-model="cloneSourceSlug">
             <option disabled value="">Select an event…</option>
-            <option v-for="event in sortedEvents" :key="event.id" :value="event.slug">
-              {{ event.systemName }} — {{ event.title }}
-            </option>
+            <optgroup v-if="activeEvents.length" label="Active">
+              <option v-for="event in activeEvents" :key="event.id" :value="event.slug">
+                {{ event.systemName }} — {{ event.title }}
+              </option>
+            </optgroup>
+            <optgroup v-if="pastEvents.length" label="Past">
+              <option v-for="event in pastEvents" :key="event.id" :value="event.slug">
+                {{ event.systemName }} — {{ event.title }}
+              </option>
+            </optgroup>
           </select>
         </label>
         <div class="create-actions">
@@ -305,6 +376,28 @@ h1 {
   border-radius: var(--radius);
   padding: 1rem;
   box-shadow: var(--shadow);
+}
+
+.past-card {
+  margin-top: 1rem;
+}
+
+.card-lede {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+.page-error {
+  margin-bottom: 0.85rem;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
 }
 
 .card-head {

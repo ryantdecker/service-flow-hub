@@ -486,6 +486,12 @@ export async function saveEventFlow(
 ) {
   const event = await getEventBySlugs(orgSlug, venueSlug, eventSlug)
   if (!event) return null
+  if (event.status === 'ended') {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Past events are read-only. Clone the flow to edit.',
+    })
+  }
   const { itemsById } = await getMergedItemMap(orgSlug, venueSlug)
   const startsAt = input.startsAt ?? event.startsAt
 
@@ -540,15 +546,18 @@ export async function resolveVenueLive(orgSlug: string, venueSlug: string) {
     venueId: venue.id,
   })
 
+  // Guests only see a live service, or the most recent concluded one.
+  // Drafts / future flows stay admin-only.
   const live = events.find((event) => event.status === 'live')
-  const upcoming = events
-    .filter((event) => event.status === 'draft')
-    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0]
-  const ended = events
+  const mostRecentEnded = events
     .filter((event) => event.status === 'ended')
-    .sort((a, b) => b.startsAt.localeCompare(a.startsAt))[0]
+    .sort((a, b) => {
+      const aEnd = a.endsAt ?? a.startsAt
+      const bEnd = b.endsAt ?? b.startsAt
+      return bEnd.localeCompare(aEnd) || b.startsAt.localeCompare(a.startsAt)
+    })[0]
 
-  const featured = live ?? upcoming ?? ended ?? null
+  const featured = live ?? mostRecentEnded ?? null
 
   return {
     organization: org,

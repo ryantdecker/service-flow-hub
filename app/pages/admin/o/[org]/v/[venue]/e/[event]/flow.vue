@@ -19,6 +19,7 @@ type FlowRow = {
 }
 
 const route = useRoute()
+const router = useRouter()
 const orgSlug = computed(() => String(route.params.org))
 const venueSlug = computed(() => String(route.params.venue))
 const eventSlug = computed(() => String(route.params.event))
@@ -31,6 +32,11 @@ const { data, refresh } = await useFetch<{
   venueLibrary: ItemLibrary
   library: ItemLibrary
 }>(() => `/api/events/${orgSlug.value}/${venueSlug.value}/${eventSlug.value}`)
+
+const isReadOnly = computed(() => data.value?.event.status === 'ended')
+const cloning = ref(false)
+/** Mobile slide-over: segment fields or library. Desktop keeps the side panel always visible. */
+const mobileSheet = ref<null | 'edit' | 'library'>(null)
 
 function toRows(event: EventRecord): FlowRow[] {
   const scheduleById = new Map(event.schedule.map((beat) => [beat.segmentId, beat.startsAt]))
@@ -223,6 +229,33 @@ function selectSegment(index: number) {
     }
   }
 }
+
+function openMobileEdit(index: number) {
+  selectSegment(index)
+  mobileSheet.value = 'edit'
+}
+
+function openMobileLibrary(index: number) {
+  selectSegment(index)
+  mobileSheet.value = 'library'
+}
+
+async function backFromMobileSheet() {
+  if (!isReadOnly.value) {
+    await saveFlow()
+    if (error.value) return
+  }
+  mobileSheet.value = null
+}
+
+watch(mobileSheet, (sheet) => {
+  if (!import.meta.client) return
+  document.body.style.overflow = sheet ? 'hidden' : ''
+})
+
+onBeforeUnmount(() => {
+  if (import.meta.client) document.body.style.overflow = ''
+})
 
 function addSegment() {
   const id = `seg_${Date.now().toString(36)}`
@@ -482,7 +515,28 @@ function isDropLine(segIndex: number, insertIndex: number) {
   return dropHint.value?.segIndex === segIndex && dropHint.value.insertIndex === insertIndex
 }
 
+async function cloneFlow() {
+  cloning.value = true
+  message.value = ''
+  error.value = ''
+  try {
+    const result = await $fetch<{ event: EventRecord; path: string }>(
+      `/api/events/${orgSlug.value}/${venueSlug.value}/${eventSlug.value}/clone`,
+      { method: 'POST' },
+    )
+    await router.push(result.path)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Clone failed'
+  } finally {
+    cloning.value = false
+  }
+}
+
 async function saveFlow() {
+  if (isReadOnly.value) {
+    error.value = 'Past events are read-only. Clone the flow to edit.'
+    return
+  }
   saving.value = true
   message.value = ''
   error.value = ''
@@ -527,35 +581,57 @@ async function saveFlow() {
         <NuxtLink class="back" :to="`/admin/o/${orgSlug}/v/${venueSlug}`">
           ← {{ data.venue.name }}
         </NuxtLink>
-        <p class="kicker">Flow builder</p>
+        <p class="kicker">{{ isReadOnly ? 'Past flow' : 'Flow builder' }}</p>
         <h1>{{ systemName || data.event.systemName }}</h1>
         <p class="lede">
-          Group library items into segments and set start times. Guests see the display name below.
+          <template v-if="isReadOnly">
+            This past flow is read-only. Clone it to make changes.
+          </template>
+          <template v-else>
+            Group library items into segments and set start times. Guests see the display name below.
+          </template>
         </p>
       </div>
       <div class="toolbar">
         <NuxtLink class="btn ghost" :to="`/v/${orgSlug}/${venueSlug}`">Guest view</NuxtLink>
-        <button type="button" class="btn" :disabled="saving" @click="saveFlow">
+        <button
+          type="button"
+          class="btn ghost"
+          :disabled="cloning"
+          @click="cloneFlow"
+        >
+          {{ cloning ? 'Cloning…' : 'Clone' }}
+        </button>
+        <button
+          v-if="!isReadOnly"
+          type="button"
+          class="btn"
+          :disabled="saving"
+          @click="saveFlow"
+        >
           Save flow
         </button>
       </div>
     </header>
 
+    <p v-if="isReadOnly" class="readonly-banner">
+      Past events stay available for reference and cloning, but can’t be edited.
+    </p>
     <p v-if="message" class="ok">{{ message }}</p>
     <p v-if="error" class="error">{{ error }}</p>
 
     <div class="name-fields">
       <label class="title-field">
         <span>System name</span>
-        <input v-model="systemName" type="text" placeholder="City Sun 9:00">
+        <input v-model="systemName" type="text" placeholder="City Sun 9:00" :disabled="isReadOnly">
       </label>
       <label class="title-field">
         <span>Guest display name</span>
-        <input v-model="title" type="text" placeholder="Sunday 9:00">
+        <input v-model="title" type="text" placeholder="Sunday 9:00" :disabled="isReadOnly">
       </label>
     </div>
 
-    <div class="split">
+    <div class="split" :class="{ readonly: isReadOnly }">
       <section class="card">
         <div class="card-head">
           <h2>Segments</h2>
@@ -571,7 +647,8 @@ async function saveFlow() {
             <button type="button" class="btn sm" @click="addSegment">Add segment</button>
           </div>
         </div>
-        <p class="hint">Drag segments or items to reorder. Drag library items onto a segment to add them.</p>
+        <p class="hint desktop-only">Drag segments or items to reorder. Drag library items onto a segment to add them.</p>
+        <p class="hint mobile-only mobile-hint">Edit a section for details, or add items from the library.</p>
         <ul class="seg-list">
           <li v-if="isSegDropLine(0)" class="seg-drop-line" aria-hidden="true" />
           <template v-for="(row, index) in rows" :key="row.id">
@@ -620,7 +697,15 @@ async function saveFlow() {
                 </span>
               </button>
               <div class="seg-tools">
-                <button type="button" class="icon danger" :disabled="rows.length <= 1" @click="removeSegment(index)">×</button>
+                <button
+                  type="button"
+                  class="text-btn mobile-only"
+                  :disabled="isReadOnly"
+                  @click="openMobileEdit(index)"
+                >
+                  Edit
+                </button>
+                <button type="button" class="icon danger" :disabled="rows.length <= 1 || isReadOnly" @click="removeSegment(index)">×</button>
               </div>
             </div>
 
@@ -682,6 +767,20 @@ async function saveFlow() {
                 Drop items here
               </li>
             </ul>
+
+            <div
+              v-show="!isCollapsed(row.id)"
+              class="seg-footer mobile-only"
+            >
+              <button
+                type="button"
+                class="btn ghost sm add-item-btn"
+                :disabled="isReadOnly"
+                @click="openMobileLibrary(index)"
+              >
+                Add item
+              </button>
+            </div>
           </li>
           <li
             v-if="isSegDropLine(index + 1)"
@@ -692,27 +791,37 @@ async function saveFlow() {
         </ul>
       </section>
 
-      <div class="side">
-        <section v-if="active" class="card editor">
-          <div class="card-head">
+      <div class="side" :class="{ open: Boolean(mobileSheet) }">
+        <div class="sheet-bar mobile-only">
+          <button type="button" class="btn ghost sm" :disabled="saving" @click="backFromMobileSheet">
+            {{ saving ? 'Saving…' : '← Back' }}
+          </button>
+          <h2>
+            <template v-if="mobileSheet === 'edit'">Edit segment</template>
+            <template v-else-if="mobileSheet === 'library'">Add item</template>
+          </h2>
+        </div>
+
+        <section v-if="active && mobileSheet !== 'library'" class="card editor">
+          <div class="card-head desktop-only">
             <h2>Edit segment</h2>
           </div>
           <div class="fields">
             <label>
               <span>Label</span>
-              <input v-model="active.label" type="text">
+              <input v-model="active.label" type="text" :disabled="isReadOnly">
             </label>
             <label>
               <span>Start time</span>
-              <input v-model="active.startTime" type="time">
+              <input v-model="active.startTime" type="time" :disabled="isReadOnly">
             </label>
             <label>
               <span>Description</span>
-              <textarea v-model="active.desc" rows="3" />
+              <textarea v-model="active.desc" rows="3" :disabled="isReadOnly" />
             </label>
             <label>
               <span>Video item (optional)</span>
-              <select v-model="active.videoItemId">
+              <select v-model="active.videoItemId" :disabled="isReadOnly">
                 <option value="">None</option>
                 <option v-for="item in videoItems" :key="item.id" :value="item.id">
                   {{ item.title }}
@@ -722,11 +831,11 @@ async function saveFlow() {
           </div>
         </section>
 
-        <section class="card library-card">
+        <section v-if="mobileSheet !== 'edit'" class="card library-card">
           <div class="card-head">
-            <h2>Library</h2>
+            <h2 class="desktop-only">Library</h2>
             <div class="lib-actions">
-              <button type="button" class="text-btn" @click="openCreate">Create new</button>
+              <button type="button" class="text-btn" :disabled="isReadOnly" @click="openCreate">Create new</button>
               <NuxtLink class="text-btn" :to="manageItemsTo">Manage items</NuxtLink>
             </div>
           </div>
@@ -803,7 +912,11 @@ async function saveFlow() {
             </div>
           </div>
 
-          <p class="hint">Drag an item onto a segment in the outline.</p>
+          <p class="hint desktop-only">Drag an item onto a segment in the outline.</p>
+          <p class="hint mobile-only mobile-hint">
+            Tap an item to add it to
+            <strong>{{ active?.label || 'this segment' }}</strong>.
+          </p>
           <p v-if="!attachableItems.length" class="empty">
             {{ librarySearch.trim()
               ? 'No items match your search.'
@@ -930,6 +1043,21 @@ h1 {
   margin-bottom: 0.65rem;
 }
 
+.readonly-banner {
+  margin: 0 0 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  background: var(--teal-soft);
+  color: var(--teal-deep);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.title-field input:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
 .name-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -976,6 +1104,15 @@ h1 {
   grid-template-columns: minmax(300px, 1.15fr) minmax(280px, 0.95fr);
   gap: 0.9rem;
   align-items: start;
+}
+
+.split.readonly {
+  pointer-events: none;
+  opacity: 0.82;
+}
+
+.split.readonly .seg-toggle {
+  pointer-events: auto;
 }
 
 .side {
@@ -1450,6 +1587,22 @@ h1 {
   text-decoration: none;
 }
 
+.mobile-only {
+  display: none;
+}
+
+.sheet-bar {
+  display: none;
+}
+
+.seg-footer {
+  padding: 0.55rem 0.65rem 0.15rem;
+}
+
+.add-item-btn {
+  width: 100%;
+}
+
 @media (max-width: 900px) {
   .split {
     grid-template-columns: 1fr;
@@ -1457,6 +1610,75 @@ h1 {
 
   .lib-filters {
     grid-template-columns: 1fr;
+  }
+
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: revert;
+  }
+
+  .seg-footer.mobile-only {
+    display: block;
+  }
+
+  .seg-tools .mobile-only {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Keep edit/library out of the main mobile scroll — only the slide-over. */
+  .side:not(.open) {
+    display: none !important;
+  }
+
+  .side.open {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0.85rem 1rem 1.5rem;
+    background: var(--gray-wash);
+    overflow: auto;
+    animation: sheet-in 0.28s var(--ease);
+  }
+
+  @keyframes sheet-in {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  .sheet-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    margin: -0.85rem -1rem 0;
+    padding: 0.75rem 1rem;
+    background: var(--white);
+    border-bottom: 1px solid rgba(26, 107, 99, 0.12);
+  }
+
+  .sheet-bar h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    color: var(--teal-deep);
+  }
+
+  .mobile-hint {
+    display: block;
   }
 }
 </style>

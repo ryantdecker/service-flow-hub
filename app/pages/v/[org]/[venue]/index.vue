@@ -46,7 +46,7 @@ onBeforeUnmount(() => {
   </div>
   <div v-else-if="data" class="empty">
     <h1>{{ data.venue.name }}</h1>
-    <p>No live or upcoming event yet for this venue.</p>
+    <p>No live or recent service for this venue yet.</p>
     <NuxtLink :to="`/admin/o/${orgSlug}`">Back to admin</NuxtLink>
   </div>
   <div v-else class="empty">

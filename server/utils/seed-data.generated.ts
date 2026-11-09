@@ -13,7 +13,7 @@ export const SEED_JSON: Record<string, unknown> = {
   "title": "Sunday 9:00",
   "startsAt": "2026-11-09T09:00:00-06:00",
   "endsAt": "2026-11-09T10:20:00-06:00",
-  "status": "draft",
+  "status": "ended",
   "liveState": {
     "currentSegmentId": "welcome",
     "mode": "scheduled",
