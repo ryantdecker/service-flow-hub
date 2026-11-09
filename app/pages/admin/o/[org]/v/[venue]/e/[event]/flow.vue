@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type {
   EventRecord,
+  ItemKind,
   ItemLibrary,
   LibraryItem,
+  LibraryScope,
   Organization,
   Venue,
 } from '~~/shared/types'
@@ -25,6 +27,8 @@ const { data, refresh } = await useFetch<{
   organization: Organization
   venue: Venue
   event: EventRecord
+  orgLibrary: ItemLibrary
+  venueLibrary: ItemLibrary
   library: ItemLibrary
 }>(() => `/api/events/${orgSlug.value}/${venueSlug.value}/${eventSlug.value}`)
 
@@ -45,36 +49,185 @@ function toRows(event: EventRecord): FlowRow[] {
 }
 
 const rows = ref<FlowRow[]>(data.value ? toRows(data.value.event) : [])
+const systemName = ref(data.value?.event.systemName ?? data.value?.event.title ?? '')
 const title = ref(data.value?.event.title ?? '')
 const saving = ref(false)
 const message = ref('')
 const error = ref('')
 const selectedRow = ref(0)
+const collapsedById = ref<Record<string, boolean>>({})
+const libraryScope = ref<LibraryScope>('org')
+const libraryKindFilter = ref<'all' | ItemKind>('all')
+const librarySearch = ref('')
+const showCreate = ref(false)
+const creating = ref(false)
+const createError = ref('')
+const kinds: ItemKind[] = ['link', 'song', 'video', 'cta', 'resource']
+const libraryFilterKinds: ItemKind[] = ['link', 'song', 'cta', 'resource']
+const createDraft = ref({
+  kind: 'link' as ItemKind,
+  title: '',
+  meta: '',
+  href: '#',
+  cta: false,
+  caption: '',
+  embedUrl: '',
+})
 
+function applyEventToEditor(event: EventRecord) {
+  rows.value = toRows(event)
+  systemName.value = event.systemName || event.title
+  title.value = event.title
+}
+
+// Only re-sync the editor when a different event is loaded — not on every refresh,
+// which was wiping in-progress / just-saved item order with stale fetch data.
 watch(
-  () => data.value?.event,
-  (event) => {
-    if (!event) return
-    rows.value = toRows(event)
-    title.value = event.title
+  () => data.value?.event?.id,
+  (id, prevId) => {
+    const event = data.value?.event
+    if (!event || !id || id === prevId) return
+    applyEventToEditor(event)
   },
 )
 
-const libraryItems = computed(() => data.value?.library.items ?? [])
-const videoItems = computed(() => libraryItems.value.filter((item) => item.kind === 'video'))
-const attachableItems = computed(() =>
-  libraryItems.value.filter((item) => item.kind !== 'video'),
+const orgItems = computed(() => data.value?.orgLibrary?.items ?? data.value?.library?.items ?? [])
+const venueItems = computed(() => data.value?.venueLibrary?.items ?? [])
+const scopedItems = computed(() =>
+  libraryScope.value === 'venue' ? venueItems.value : orgItems.value,
+)
+const allItems = computed(() => {
+  const map = new Map<string, LibraryItem>()
+  for (const item of orgItems.value) map.set(item.id, item)
+  for (const item of venueItems.value) map.set(item.id, item)
+  return [...map.values()]
+})
+const videoItems = computed(() => allItems.value.filter((item) => item.kind === 'video'))
+
+function matchesLibrarySearch(item: LibraryItem, query: string) {
+  if (!query) return true
+  return (
+    item.title.toLowerCase().includes(query)
+    || item.meta.toLowerCase().includes(query)
+    || item.kind.includes(query)
+    || item.href.toLowerCase().includes(query)
+    || (item.tags ?? []).some((tag) => tag.toLowerCase().includes(query))
+  )
+}
+
+const attachableItems = computed(() => {
+  let list = scopedItems.value.filter((item) => item.kind !== 'video')
+  if (libraryKindFilter.value !== 'all' && libraryKindFilter.value !== 'video') {
+    list = list.filter((item) => item.kind === libraryKindFilter.value)
+  }
+  const q = librarySearch.value.trim().toLowerCase()
+  return q ? list.filter((item) => matchesLibrarySearch(item, q)) : list
+})
+const manageItemsTo = computed(() =>
+  libraryScope.value === 'venue'
+    ? `/admin/o/${orgSlug.value}/items?venue=${venueSlug.value}`
+    : `/admin/o/${orgSlug.value}/items`,
 )
 
 const active = computed(() => rows.value[selectedRow.value] ?? null)
 
 function itemById(id: string): LibraryItem | undefined {
-  return libraryItems.value.find((item) => item.id === id)
+  return allItems.value.find((item) => item.id === id)
+}
+
+function resetCreateDraft() {
+  createDraft.value = {
+    kind: 'link',
+    title: '',
+    meta: '',
+    href: '#',
+    cta: false,
+    caption: '',
+    embedUrl: '',
+  }
+  createError.value = ''
+}
+
+function openCreate() {
+  resetCreateDraft()
+  showCreate.value = true
+}
+
+async function createLibraryItem() {
+  if (!createDraft.value.title.trim()) {
+    createError.value = 'Title is required'
+    return
+  }
+  creating.value = true
+  createError.value = ''
+  try {
+    const query = libraryScope.value === 'venue' ? `?venue=${venueSlug.value}` : ''
+    const library = await $fetch<ItemLibrary>(`/api/orgs/${orgSlug.value}/items${query}`, {
+      method: 'POST',
+      body: {
+        kind: createDraft.value.kind,
+        title: createDraft.value.title,
+        meta: createDraft.value.meta,
+        href: createDraft.value.href,
+        cta: createDraft.value.cta || createDraft.value.kind === 'cta',
+        caption: createDraft.value.kind === 'video' ? createDraft.value.caption : undefined,
+        embedUrl: createDraft.value.kind === 'video' ? createDraft.value.embedUrl : undefined,
+      },
+    })
+    const created = library.items[library.items.length - 1]
+    await refresh()
+    if (created && created.kind !== 'video') addItemAtEnd(created.id)
+    if (created?.kind === 'video' && active.value) active.value.videoItemId = created.id
+    showCreate.value = false
+    resetCreateDraft()
+  } catch (e) {
+    createError.value = e instanceof Error ? e.message : 'Create failed'
+  } finally {
+    creating.value = false
+  }
+}
+
+function segmentItemCount(row: FlowRow) {
+  return row.itemIds.length + (row.videoItemId ? 1 : 0)
+}
+
+function isCollapsed(id: string) {
+  return Boolean(collapsedById.value[id])
+}
+
+const allCollapsed = computed(
+  () => rows.value.length > 0 && rows.value.every((row) => isCollapsed(row.id)),
+)
+
+function toggleCollapsed(id: string) {
+  collapsedById.value = {
+    ...collapsedById.value,
+    [id]: !collapsedById.value[id],
+  }
+}
+
+function toggleAllCollapsed() {
+  const next = !allCollapsed.value
+  const map: Record<string, boolean> = {}
+  for (const row of rows.value) map[row.id] = next
+  collapsedById.value = map
+}
+
+function selectSegment(index: number) {
+  selectedRow.value = index
+  const row = rows.value[index]
+  if (row) {
+    collapsedById.value = {
+      ...collapsedById.value,
+      [row.id]: false,
+    }
+  }
 }
 
 function addSegment() {
+  const id = `seg_${Date.now().toString(36)}`
   rows.value.push({
-    id: `seg_${Date.now().toString(36)}`,
+    id,
     label: 'New segment',
     desc: '',
     itemIds: [],
@@ -82,6 +235,7 @@ function addSegment() {
     startTime: rows.value.at(-1)?.startTime ?? '09:00',
   })
   selectedRow.value = rows.value.length - 1
+  collapsedById.value = { ...collapsedById.value, [id]: false }
 }
 
 function removeSegment(index: number) {
@@ -90,42 +244,242 @@ function removeSegment(index: number) {
   selectedRow.value = Math.max(0, Math.min(selectedRow.value, rows.value.length - 1))
 }
 
-function moveSegment(index: number, dir: -1 | 1) {
-  const target = index + dir
-  if (target < 0 || target >= rows.value.length) return
+type DragPayload =
+  | { kind: 'library'; itemId: string }
+  | { kind: 'outline'; itemId: string; fromSeg: number; fromIndex: number }
+  | { kind: 'segment'; fromIndex: number }
+
+const DRAG_MIME = 'application/x-sfh-item'
+const dragPayload = ref<DragPayload | null>(null)
+const dropHint = ref<{ segIndex: number; insertIndex: number } | null>(null)
+const segInsertHint = ref<number | null>(null)
+
+function toggleItem(itemId: string) {
+  const row = active.value
+  if (!row) return
+  const exists = row.itemIds.includes(itemId)
+  rows.value[selectedRow.value] = {
+    ...row,
+    itemIds: exists
+      ? row.itemIds.filter((id) => id !== itemId)
+      : [...row.itemIds, itemId],
+  }
+}
+
+function addItemAtEnd(itemId: string) {
+  const row = active.value
+  if (!row || row.itemIds.includes(itemId)) return
+  rows.value[selectedRow.value] = {
+    ...row,
+    itemIds: [...row.itemIds, itemId],
+  }
+}
+
+function removeItemFromSegment(segIndex: number, itemId: string) {
+  const row = rows.value[segIndex]
+  if (!row) return
+  rows.value[segIndex] = {
+    ...row,
+    itemIds: row.itemIds.filter((id) => id !== itemId),
+  }
+}
+
+function readDragPayload(event: DragEvent): DragPayload | null {
+  const raw = event.dataTransfer?.getData(DRAG_MIME) || event.dataTransfer?.getData('text/plain')
+  if (!raw) return dragPayload.value
+  try {
+    return JSON.parse(raw) as DragPayload
+  } catch {
+    return dragPayload.value
+  }
+}
+
+function onLibraryDragStart(event: DragEvent, itemId: string) {
+  const payload: DragPayload = { kind: 'library', itemId }
+  dragPayload.value = payload
+  event.dataTransfer?.setData(DRAG_MIME, JSON.stringify(payload))
+  event.dataTransfer?.setData('text/plain', JSON.stringify(payload))
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copyMove'
+}
+
+function onOutlineDragStart(event: DragEvent, segIndex: number, itemIndex: number, itemId: string) {
+  selectedRow.value = segIndex
+  const payload: DragPayload = { kind: 'outline', itemId, fromSeg: segIndex, fromIndex: itemIndex }
+  dragPayload.value = payload
+  segInsertHint.value = null
+  event.dataTransfer?.setData(DRAG_MIME, JSON.stringify(payload))
+  event.dataTransfer?.setData('text/plain', JSON.stringify(payload))
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+}
+
+function onSegmentDragStart(event: DragEvent, fromIndex: number) {
+  const payload: DragPayload = { kind: 'segment', fromIndex }
+  dragPayload.value = payload
+  dropHint.value = null
+  event.dataTransfer?.setData(DRAG_MIME, JSON.stringify(payload))
+  event.dataTransfer?.setData('text/plain', JSON.stringify(payload))
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+  event.stopPropagation()
+}
+
+function onDragEnd() {
+  dragPayload.value = null
+  dropHint.value = null
+  segInsertHint.value = null
+}
+
+function setDropHint(segIndex: number, insertIndex: number, event: DragEvent) {
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = dragPayload.value?.kind === 'library' ? 'copy' : 'move'
+  }
+  dropHint.value = { segIndex, insertIndex }
+  segInsertHint.value = null
+}
+
+function onNestedItemDragOver(event: DragEvent, segIndex: number, itemIndex: number) {
+  if (dragPayload.value?.kind === 'segment') return
+  event.stopPropagation()
+  const el = event.currentTarget as HTMLElement
+  const rect = el.getBoundingClientRect()
+  const insertIndex = event.clientY < rect.top + rect.height / 2 ? itemIndex : itemIndex + 1
+  setDropHint(segIndex, insertIndex, event)
+}
+
+function onNestedListDragOver(event: DragEvent, segIndex: number) {
+  if (dragPayload.value?.kind === 'segment') return
+  const target = event.target as HTMLElement | null
+  // Keep the mid-list insert indicator if we're over an existing drop line.
+  if (target?.closest('.drop-line')) {
+    event.preventDefault()
+    return
+  }
+  // Nested item handlers own mid-list placement; don't let the list reset to "append".
+  if (target?.closest('.nested-item:not(.empty):not(.drop-zone):not(.video)')) return
+  if (target?.closest('.nested-item.video')) {
+    setDropHint(segIndex, 0, event)
+    return
+  }
+  const row = rows.value[segIndex]
+  setDropHint(segIndex, row?.itemIds.length ?? 0, event)
+}
+
+function onSegmentDragOver(event: DragEvent, index: number) {
+  if (dragPayload.value?.kind !== 'segment') return
+  event.preventDefault()
+  event.stopPropagation()
+  const el = event.currentTarget as HTMLElement
+  const rect = el.getBoundingClientRect()
+  segInsertHint.value = event.clientY < rect.top + rect.height / 2 ? index : index + 1
+  dropHint.value = null
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+}
+
+function reorderSegment(fromIndex: number, insertIndex: number) {
+  if (fromIndex === insertIndex || fromIndex + 1 === insertIndex) return
   const copy = [...rows.value]
-  const [row] = copy.splice(index, 1)
+  const [row] = copy.splice(fromIndex, 1)
+  if (!row) return
+  let target = insertIndex
+  if (fromIndex < target) target -= 1
+  target = Math.max(0, Math.min(target, copy.length))
   copy.splice(target, 0, row)
   rows.value = copy
   selectedRow.value = target
 }
 
-function toggleItem(itemId: string) {
-  if (!active.value) return
-  const set = new Set(active.value.itemIds)
-  if (set.has(itemId)) set.delete(itemId)
-  else set.add(itemId)
-  active.value.itemIds = [...set]
+function onSegmentDrop(event: DragEvent, index: number) {
+  const payload = readDragPayload(event)
+  if (payload?.kind !== 'segment') return
+  event.preventDefault()
+  event.stopPropagation()
+  const insertIndex = segInsertHint.value
+    ?? (() => {
+      const el = event.currentTarget as HTMLElement
+      const rect = el.getBoundingClientRect()
+      return event.clientY < rect.top + rect.height / 2 ? index : index + 1
+    })()
+  reorderSegment(payload.fromIndex, insertIndex)
+  onDragEnd()
 }
 
-function addItemAtEnd(itemId: string) {
-  if (!active.value || active.value.itemIds.includes(itemId)) return
-  active.value.itemIds = [...active.value.itemIds, itemId]
+function onSegLiDragOver(event: DragEvent, index: number) {
+  if (dragPayload.value?.kind === 'segment') {
+    onSegmentDragOver(event, index)
+    return
+  }
+  const row = rows.value[index]
+  if (row && isCollapsed(row.id)) onNestedListDragOver(event, index)
 }
 
-function removeItemFromSegment(itemId: string) {
-  if (!active.value) return
-  active.value.itemIds = active.value.itemIds.filter((id) => id !== itemId)
+function onSegLiDrop(event: DragEvent, index: number) {
+  const payload = readDragPayload(event) ?? dragPayload.value
+  if (payload?.kind === 'segment') {
+    onSegmentDrop(event, index)
+    return
+  }
+  const row = rows.value[index]
+  if (row && isCollapsed(row.id)) onNestedDrop(index, event)
 }
 
-function moveItem(itemIndex: number, dir: -1 | 1) {
-  if (!active.value) return
-  const target = itemIndex + dir
-  if (target < 0 || target >= active.value.itemIds.length) return
-  const copy = [...active.value.itemIds]
-  const [id] = copy.splice(itemIndex, 1)
-  copy.splice(target, 0, id)
-  active.value.itemIds = copy
+function isSegDropLine(insertIndex: number) {
+  return segInsertHint.value === insertIndex
+}
+
+function insertItemAt(segIndex: number, insertIndex: number, itemId: string) {
+  const row = rows.value[segIndex]
+  if (!row) return
+  const next = [...row.itemIds]
+  const existing = next.indexOf(itemId)
+  let target = insertIndex
+  if (existing !== -1) {
+    next.splice(existing, 1)
+    if (existing < target) target -= 1
+  }
+  target = Math.max(0, Math.min(target, next.length))
+  next.splice(target, 0, itemId)
+  // Replace the row so Vue always sees a new itemIds reference.
+  rows.value[segIndex] = { ...row, itemIds: next }
+}
+
+function applyDrop(segIndex: number, insertIndex: number, event: DragEvent) {
+  event.preventDefault()
+  const payload = readDragPayload(event)
+  dropHint.value = null
+  segInsertHint.value = null
+  dragPayload.value = null
+  if (!payload || payload.kind === 'segment') return
+
+  selectSegment(segIndex)
+
+  if (payload.kind === 'library') {
+    insertItemAt(segIndex, insertIndex, payload.itemId)
+    return
+  }
+
+  const source = rows.value[payload.fromSeg]
+  if (!source) return
+
+  if (payload.fromSeg === segIndex) {
+    insertItemAt(segIndex, insertIndex, payload.itemId)
+    return
+  }
+
+  source.itemIds = source.itemIds.filter((id) => id !== payload.itemId)
+  insertItemAt(segIndex, insertIndex, payload.itemId)
+}
+
+function onNestedDrop(segIndex: number, event: DragEvent) {
+  event.stopPropagation()
+  const hint = dropHint.value
+  const insertIndex = hint?.segIndex === segIndex
+    ? hint.insertIndex
+    : (rows.value[segIndex]?.itemIds.length ?? 0)
+  applyDrop(segIndex, insertIndex, event)
+}
+
+function isDropLine(segIndex: number, insertIndex: number) {
+  return dropHint.value?.segIndex === segIndex && dropHint.value.insertIndex === insertIndex
 }
 
 async function saveFlow() {
@@ -133,24 +487,30 @@ async function saveFlow() {
   message.value = ''
   error.value = ''
   try {
-    await $fetch(
+    const updated = await $fetch<EventRecord>(
       `/api/events/${orgSlug.value}/${venueSlug.value}/${eventSlug.value}/flow`,
       {
         method: 'PUT',
         body: {
+          systemName: systemName.value,
           title: title.value,
           segments: rows.value.map((row) => ({
             id: row.id,
             label: row.label,
             desc: row.desc,
-            itemIds: row.itemIds,
+            itemIds: [...row.itemIds],
             videoItemId: row.videoItemId || undefined,
             startTime: row.startTime,
           })),
         },
       },
     )
+    applyEventToEditor(updated)
+    if (data.value) data.value.event = updated
+    // Refresh libraries only; avoid clobbering editor rows with a cached event GET.
     await refresh()
+    if (data.value) data.value.event = updated
+    applyEventToEditor(updated)
     message.value = 'Flow saved — guest snapshot updated.'
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Save failed'
@@ -168,13 +528,12 @@ async function saveFlow() {
           ← {{ data.venue.name }}
         </NuxtLink>
         <p class="kicker">Flow builder</p>
-        <h1>{{ data.event.title }}</h1>
+        <h1>{{ systemName || data.event.systemName }}</h1>
         <p class="lede">
-          Group library items into segments and set start times. Guest phones use the resolved snapshot.
+          Group library items into segments and set start times. Guests see the display name below.
         </p>
       </div>
       <div class="toolbar">
-        <NuxtLink class="btn ghost" :to="`/admin/o/${orgSlug}/items`">Item library</NuxtLink>
         <NuxtLink class="btn ghost" :to="`/v/${orgSlug}/${venueSlug}`">Guest view</NuxtLink>
         <button type="button" class="btn" :disabled="saving" @click="saveFlow">
           Save flow
@@ -185,147 +544,297 @@ async function saveFlow() {
     <p v-if="message" class="ok">{{ message }}</p>
     <p v-if="error" class="error">{{ error }}</p>
 
-    <label class="title-field">
-      <span>Event title</span>
-      <input v-model="title" type="text">
-    </label>
+    <div class="name-fields">
+      <label class="title-field">
+        <span>System name</span>
+        <input v-model="systemName" type="text" placeholder="City Sun 9:00">
+      </label>
+      <label class="title-field">
+        <span>Guest display name</span>
+        <input v-model="title" type="text" placeholder="Sunday 9:00">
+      </label>
+    </div>
 
     <div class="split">
       <section class="card">
         <div class="card-head">
           <h2>Segments</h2>
-          <button type="button" class="btn sm" @click="addSegment">Add segment</button>
+          <div class="seg-head-actions">
+            <button
+              type="button"
+              class="text-btn"
+              :disabled="!rows.length"
+              @click="toggleAllCollapsed"
+            >
+              {{ allCollapsed ? 'Expand all' : 'Collapse all' }}
+            </button>
+            <button type="button" class="btn sm" @click="addSegment">Add segment</button>
+          </div>
         </div>
+        <p class="hint">Drag segments or items to reorder. Drag library items onto a segment to add them.</p>
         <ul class="seg-list">
+          <li v-if="isSegDropLine(0)" class="seg-drop-line" aria-hidden="true" />
+          <template v-for="(row, index) in rows" :key="row.id">
           <li
-            v-for="(row, index) in rows"
-            :key="row.id"
             class="seg-li"
-            :class="{ selected: index === selectedRow }"
+            :class="{
+              selected: index === selectedRow,
+              collapsed: isCollapsed(row.id),
+              dragging: dragPayload?.kind === 'segment' && dragPayload.fromIndex === index,
+              'drop-active': dropHint?.segIndex === index,
+            }"
+            @dragover="onSegLiDragOver($event, index)"
+            @drop="onSegLiDrop($event, index)"
           >
             <div class="seg-header">
+              <span
+                class="drag-handle seg-drag"
+                draggable="true"
+                title="Drag to reorder segment"
+                @dragstart="onSegmentDragStart($event, index)"
+                @dragend="onDragEnd"
+              >⋮⋮</span>
+              <button
+                type="button"
+                class="collapse-btn"
+                :aria-expanded="!isCollapsed(row.id)"
+                :aria-label="isCollapsed(row.id) ? 'Expand segment' : 'Collapse segment'"
+                @click="toggleCollapsed(row.id)"
+              >
+                {{ isCollapsed(row.id) ? '▸' : '▾' }}
+              </button>
               <button
                 type="button"
                 class="seg-row"
-                @click="selectedRow = index"
+                @click="selectSegment(index)"
               >
                 <span class="idx">{{ String(index + 1).padStart(2, '0') }}</span>
                 <span class="copy">
-                  <strong>{{ row.label || 'Untitled' }}</strong>
+                  <strong>
+                    {{ row.label || 'Untitled' }}
+                    <span class="count-badge" :title="`${segmentItemCount(row)} items`">
+                      {{ segmentItemCount(row) }}
+                    </span>
+                  </strong>
                   <span class="meta">{{ row.startTime }}</span>
                 </span>
               </button>
               <div class="seg-tools">
-                <button type="button" class="icon" :disabled="index === 0" @click="moveSegment(index, -1)">↑</button>
-                <button type="button" class="icon" :disabled="index === rows.length - 1" @click="moveSegment(index, 1)">↓</button>
                 <button type="button" class="icon danger" :disabled="rows.length <= 1" @click="removeSegment(index)">×</button>
               </div>
             </div>
 
-            <ul class="nested-items" @click="selectedRow = index">
-              <li v-if="row.videoItemId" class="nested-item video">
+            <ul
+              v-show="!isCollapsed(row.id)"
+              class="nested-items"
+              @click="selectSegment(index)"
+              @dragover="onNestedListDragOver($event, index)"
+              @drop="onNestedDrop(index, $event)"
+            >
+              <li
+                v-if="row.videoItemId"
+                class="nested-item video"
+                @dragover="setDropHint(index, 0, $event)"
+                @drop="onNestedDrop(index, $event)"
+              >
                 <span class="nested-kind">video</span>
                 <span class="nested-title">{{ itemById(row.videoItemId)?.title ?? row.videoItemId }}</span>
               </li>
+
               <li
-                v-for="itemId in row.itemIds"
-                :key="itemId"
-                class="nested-item"
-              >
-                <span class="nested-kind">{{ itemById(itemId)?.kind ?? 'item' }}</span>
-                <span class="nested-title">{{ itemById(itemId)?.title ?? itemId }}</span>
-              </li>
+                v-if="isDropLine(index, 0)"
+                class="drop-line"
+                aria-hidden="true"
+              />
+
+              <template v-for="(itemId, itemIndex) in row.itemIds" :key="itemId">
+                <li
+                  class="nested-item"
+                  :class="{ dragging: dragPayload?.kind === 'outline' && dragPayload.itemId === itemId }"
+                  draggable="true"
+                  @dragstart="onOutlineDragStart($event, index, itemIndex, itemId)"
+                  @dragend="onDragEnd"
+                  @dragover.prevent="onNestedItemDragOver($event, index, itemIndex)"
+                  @drop.prevent="onNestedDrop(index, $event)"
+                >
+                  <span class="drag-handle" aria-hidden="true">⋮⋮</span>
+                  <span class="nested-kind">{{ itemById(itemId)?.kind ?? 'item' }}</span>
+                  <span class="nested-title">{{ itemById(itemId)?.title ?? itemId }}</span>
+                  <button
+                    type="button"
+                    class="icon danger nested-remove"
+                    @click.stop="removeItemFromSegment(index, itemId)"
+                  >
+                    ×
+                  </button>
+                </li>
+                <li
+                  v-if="isDropLine(index, itemIndex + 1)"
+                  class="drop-line"
+                  aria-hidden="true"
+                />
+              </template>
+
               <li
                 v-if="!row.itemIds.length && !row.videoItemId"
-                class="nested-item empty"
+                class="nested-item empty drop-zone"
               >
-                No items yet
+                Drop items here
               </li>
             </ul>
           </li>
+          <li
+            v-if="isSegDropLine(index + 1)"
+            class="seg-drop-line"
+            aria-hidden="true"
+          />
+          </template>
         </ul>
       </section>
 
-      <section v-if="active" class="card editor">
-        <div class="card-head">
-          <h2>Edit segment</h2>
-        </div>
-        <div class="fields">
-          <label>
-            <span>Label</span>
-            <input v-model="active.label" type="text">
-          </label>
-          <label>
-            <span>Start time</span>
-            <input v-model="active.startTime" type="time">
-          </label>
-          <label>
-            <span>Description</span>
-            <textarea v-model="active.desc" rows="3" />
-          </label>
-          <label>
-            <span>Video item (optional)</span>
-            <select v-model="active.videoItemId">
-              <option value="">None</option>
-              <option v-for="item in videoItems" :key="item.id" :value="item.id">
-                {{ item.title }}
-              </option>
-            </select>
-          </label>
-        </div>
-
-        <div class="block">
-          <div class="card-head tight">
-            <h3>Items in this segment</h3>
+      <div class="side">
+        <section v-if="active" class="card editor">
+          <div class="card-head">
+            <h2>Edit segment</h2>
           </div>
-          <p v-if="!active.itemIds.length" class="empty">No items yet — pick from the library below.</p>
-          <ul class="picked">
-            <li v-for="(itemId, itemIndex) in active.itemIds" :key="itemId">
-              <span>
-                <strong>{{ itemById(itemId)?.title ?? itemId }}</strong>
-                <span class="meta">{{ itemById(itemId)?.kind }} · {{ itemById(itemId)?.meta }}</span>
-              </span>
-              <span class="picked-tools">
-                <button type="button" class="icon" :disabled="itemIndex === 0" @click="moveItem(itemIndex, -1)">↑</button>
-                <button type="button" class="icon" :disabled="itemIndex === active.itemIds.length - 1" @click="moveItem(itemIndex, 1)">↓</button>
-                <button type="button" class="text-btn danger" @click="removeItemFromSegment(itemId)">Remove</button>
-              </span>
-            </li>
-          </ul>
-        </div>
-
-        <div class="block">
-          <div class="card-head tight">
-            <h3>Library</h3>
-            <NuxtLink class="text-btn" :to="`/admin/o/${orgSlug}/items`">Manage items</NuxtLink>
+          <div class="fields">
+            <label>
+              <span>Label</span>
+              <input v-model="active.label" type="text">
+            </label>
+            <label>
+              <span>Start time</span>
+              <input v-model="active.startTime" type="time">
+            </label>
+            <label>
+              <span>Description</span>
+              <textarea v-model="active.desc" rows="3" />
+            </label>
+            <label>
+              <span>Video item (optional)</span>
+              <select v-model="active.videoItemId">
+                <option value="">None</option>
+                <option v-for="item in videoItems" :key="item.id" :value="item.id">
+                  {{ item.title }}
+                </option>
+              </select>
+            </label>
           </div>
+        </section>
+
+        <section class="card library-card">
+          <div class="card-head">
+            <h2>Library</h2>
+            <div class="lib-actions">
+              <button type="button" class="text-btn" @click="openCreate">Create new</button>
+              <NuxtLink class="text-btn" :to="manageItemsTo">Manage items</NuxtLink>
+            </div>
+          </div>
+
+          <div class="lib-filters">
+            <label class="scope-field">
+              <span>Show items from</span>
+              <select v-model="libraryScope">
+                <option value="org">Organization shared</option>
+                <option value="venue">{{ data.venue.name }} campus</option>
+              </select>
+            </label>
+            <label class="scope-field">
+              <span>Type</span>
+              <select v-model="libraryKindFilter">
+                <option value="all">All types</option>
+                <option v-for="kind in libraryFilterKinds" :key="kind" :value="kind">
+                  {{ kind }}
+                </option>
+              </select>
+            </label>
+            <label class="scope-field lib-search-field">
+              <span>Search</span>
+              <input
+                v-model="librarySearch"
+                type="search"
+                placeholder="Search title, meta, tags…"
+              >
+            </label>
+          </div>
+
+          <div v-if="showCreate" class="create-panel">
+            <div class="card-head tight">
+              <h3>New {{ libraryScope === 'venue' ? 'campus' : 'shared' }} item</h3>
+              <button type="button" class="text-btn" @click="showCreate = false">Cancel</button>
+            </div>
+            <p v-if="createError" class="error">{{ createError }}</p>
+            <div class="create-fields">
+              <label>
+                <span>Kind</span>
+                <select v-model="createDraft.kind">
+                  <option v-for="kind in kinds" :key="kind" :value="kind">{{ kind }}</option>
+                </select>
+              </label>
+              <label>
+                <span>Title</span>
+                <input v-model="createDraft.title" type="text" placeholder="Item title">
+              </label>
+              <label>
+                <span>Meta</span>
+                <input v-model="createDraft.meta" type="text" placeholder="Subtitle / writer">
+              </label>
+              <label>
+                <span>URL</span>
+                <input v-model="createDraft.href" type="text" placeholder="#">
+              </label>
+              <label class="check">
+                <input v-model="createDraft.cta" type="checkbox">
+                <span>Primary CTA</span>
+              </label>
+              <template v-if="createDraft.kind === 'video'">
+                <label>
+                  <span>Caption</span>
+                  <input v-model="createDraft.caption" type="text">
+                </label>
+                <label>
+                  <span>Embed URL</span>
+                  <input v-model="createDraft.embedUrl" type="text">
+                </label>
+              </template>
+              <button type="button" class="btn sm" :disabled="creating" @click="createLibraryItem">
+                {{ creating ? 'Creating…' : 'Create & add' }}
+              </button>
+            </div>
+          </div>
+
+          <p class="hint">Drag an item onto a segment in the outline.</p>
+          <p v-if="!attachableItems.length" class="empty">
+            {{ librarySearch.trim()
+              ? 'No items match your search.'
+              : `No ${libraryScope === 'venue' ? 'campus' : 'shared'}${libraryKindFilter === 'all' ? '' : ` ${libraryKindFilter}`} items yet.` }}
+          </p>
           <ul class="library">
-            <li v-for="item in attachableItems" :key="item.id">
+            <li
+              v-for="item in attachableItems"
+              :key="item.id"
+              draggable="true"
+              @dragstart="onLibraryDragStart($event, item.id)"
+              @dragend="onDragEnd"
+            >
               <button
                 type="button"
                 class="lib-row"
-                :class="{ on: active.itemIds.includes(item.id) }"
+                :class="{ on: active?.itemIds.includes(item.id) }"
                 @click="toggleItem(item.id)"
               >
+                <span class="drag-handle" aria-hidden="true">⋮⋮</span>
                 <span class="kind">{{ item.kind }}</span>
                 <span class="copy">
                   <strong>{{ item.title }}</strong>
                   <span class="meta">{{ item.meta || '—' }}</span>
                 </span>
-                <span class="mark">{{ active.itemIds.includes(item.id) ? '✓' : '+' }}</span>
-              </button>
-              <button
-                v-if="!active.itemIds.includes(item.id)"
-                type="button"
-                class="text-btn"
-                @click="addItemAtEnd(item.id)"
-              >
-                Add
+                <span class="mark">{{ active?.itemIds.includes(item.id) ? '✓' : '+' }}</span>
               </button>
             </li>
           </ul>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   </div>
 </template>
@@ -421,16 +930,29 @@ h1 {
   margin-bottom: 0.65rem;
 }
 
+.name-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin-bottom: 0.9rem;
+}
+
 .title-field {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  margin-bottom: 0.9rem;
+  margin-bottom: 0;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--ink-faint);
+}
+
+@media (max-width: 700px) {
+  .name-fields {
+    grid-template-columns: 1fr;
+  }
 }
 
 .title-field input,
@@ -451,9 +973,50 @@ h1 {
 
 .split {
   display: grid;
-  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.25fr);
+  grid-template-columns: minmax(300px, 1.15fr) minmax(280px, 0.95fr);
   gap: 0.9rem;
   align-items: start;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.hint {
+  margin: -0.35rem 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.lib-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+  margin-bottom: 0.35rem;
+}
+
+.lib-filters .scope-field {
+  margin-bottom: 0;
+}
+
+.lib-search-field {
+  grid-column: 1 / -1;
+}
+
+.scope-field input[type='search'] {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+  border: 1px solid rgba(26, 107, 99, 0.16);
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  background: var(--gray-wash);
 }
 
 .card {
@@ -486,8 +1049,87 @@ h1 {
   font-size: 1.05rem;
 }
 
+.seg-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.seg-head-actions .text-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .card-head h3 {
   font-size: 0.95rem;
+}
+
+.lib-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.scope-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.scope-field select,
+.create-fields input,
+.create-fields select {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+  border: 1px solid rgba(26, 107, 99, 0.16);
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  background: var(--gray-wash);
+}
+
+.create-panel {
+  margin-bottom: 0.85rem;
+  padding: 0.75rem;
+  border-radius: 12px;
+  background: var(--gray-wash);
+  border: 1px solid rgba(26, 107, 99, 0.12);
+}
+
+.create-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.create-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.create-fields .check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.85rem;
+  color: var(--ink);
 }
 
 .seg-list {
@@ -515,9 +1157,43 @@ h1 {
 
 .seg-header {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.35rem;
-  align-items: start;
+  grid-template-columns: auto auto 1fr auto;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.seg-drag {
+  cursor: grab;
+  padding: 0.2rem 0.15rem;
+}
+
+.seg-li.dragging {
+  opacity: 0.45;
+}
+
+.seg-drop-line {
+  height: 3px;
+  margin: 0.05rem 0;
+  border-radius: 999px;
+  background: var(--teal);
+  list-style: none;
+}
+
+.collapse-btn {
+  width: 1.7rem;
+  height: 1.7rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.collapse-btn:hover {
+  background: rgba(26, 107, 99, 0.08);
+  color: var(--teal-deep);
 }
 
 .seg-row {
@@ -530,6 +1206,31 @@ h1 {
   background: transparent;
   padding: 0.2rem 0.2rem;
   cursor: pointer;
+  min-width: 0;
+}
+
+.seg-row strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--teal-soft);
+  color: var(--teal-deep);
+  font-family: var(--font-sans, inherit);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
 }
 
 .nested-items {
@@ -541,26 +1242,62 @@ h1 {
   padding: 0;
 }
 
+.seg-li.drop-active {
+  border-color: rgba(26, 107, 99, 0.45);
+  background: rgba(26, 107, 99, 0.04);
+}
+
 .nested-item {
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.35rem 0.5rem;
+  padding: 0.28rem 0.4rem 0.28rem 0.5rem;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(26, 107, 99, 0.08);
-  cursor: pointer;
+  cursor: grab;
+}
+
+.nested-item.dragging {
+  opacity: 0.45;
 }
 
 .nested-item.video {
   background: rgba(13, 63, 60, 0.06);
+  cursor: default;
 }
 
-.nested-item.empty {
+.nested-item.empty,
+.nested-item.drop-zone {
   color: var(--ink-faint);
   font-size: 0.75rem;
   font-weight: 600;
   border-style: dashed;
+  cursor: copy;
+  justify-content: center;
+}
+
+.drop-line {
+  height: 3px;
+  margin: 0.05rem 0;
+  border-radius: 999px;
+  background: var(--teal);
+  list-style: none;
+}
+
+.drag-handle {
+  color: var(--ink-faint);
+  font-size: 0.7rem;
+  letter-spacing: -0.08em;
+  user-select: none;
+  flex: 0 0 auto;
+}
+
+.nested-remove {
+  margin-left: auto;
+  width: 1.55rem;
+  height: 1.55rem;
+  font-size: 0.72rem;
 }
 
 .nested-kind {
@@ -576,6 +1313,7 @@ h1 {
 }
 
 .nested-title {
+  flex: 1;
   font-size: 0.82rem;
   font-weight: 650;
   color: var(--ink);
@@ -609,8 +1347,7 @@ h1 {
   font-weight: 600;
 }
 
-.seg-tools,
-.picked-tools {
+.seg-tools {
   display: flex;
   gap: 0.2rem;
   align-items: center;
@@ -651,12 +1388,6 @@ h1 {
   color: var(--ink-faint);
 }
 
-.block {
-  margin-top: 1.1rem;
-  padding-top: 0.95rem;
-  border-top: 1px solid rgba(26, 107, 99, 0.1);
-}
-
 .empty {
   font-size: 0.85rem;
   color: var(--ink-faint);
@@ -664,7 +1395,6 @@ h1 {
   margin-bottom: 0.5rem;
 }
 
-.picked,
 .library {
   list-style: none;
   display: flex;
@@ -672,21 +1402,8 @@ h1 {
   gap: 0.4rem;
 }
 
-.picked > li {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.65rem 0.7rem;
-  border-radius: 10px;
-  background: var(--gray-wash);
-  border: 1px solid rgba(26, 107, 99, 0.08);
-}
-
 .library > li {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.35rem;
-  align-items: center;
+  cursor: grab;
 }
 
 .lib-row {
@@ -735,6 +1452,10 @@ h1 {
 
 @media (max-width: 900px) {
   .split {
+    grid-template-columns: 1fr;
+  }
+
+  .lib-filters {
     grid-template-columns: 1fr;
   }
 }

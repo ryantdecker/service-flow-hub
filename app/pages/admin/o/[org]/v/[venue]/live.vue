@@ -43,7 +43,8 @@ async function setNow(segmentId: string) {
         ← {{ data.venue.name }}
       </NuxtLink>
       <p class="kicker">Producer console</p>
-      <h1>{{ data.event.title }}</h1>
+      <h1>{{ data.event.systemName || data.event.title }}</h1>
+      <p class="lede guest-name">Guest display: {{ data.event.title }}</p>
       <p class="lede">
         Now:
         <strong>{{ data.event.liveState.currentSegmentId }}</strong>

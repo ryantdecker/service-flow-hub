@@ -60,14 +60,20 @@ export type LibraryItem = {
 
 export type ItemLibrary = {
   organizationId: string
+  /** When set, this library is campus/venue-specific rather than org-wide */
+  venueId?: string
   items: LibraryItem[]
 }
+
+export type LibraryScope = 'org' | 'venue'
 
 export type SegmentLink = {
   title: string
   meta: string
   href: string
   cta?: boolean
+  /** Resolved from the library at read/save time */
+  kind?: Exclude<ItemKind, 'video'>
 }
 
 export type SegmentVideo = {
@@ -109,6 +115,9 @@ export type EventRecord = {
   organizationId: string
   venueId: string
   slug: string
+  /** Internal/admin name (campus events list, producer, builder). */
+  systemName: string
+  /** Guest-facing display name shown on phones. */
   title: string
   startsAt: string
   endsAt?: string

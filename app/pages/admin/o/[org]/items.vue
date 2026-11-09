@@ -1,15 +1,42 @@
 <script setup lang="ts">
-import type { ItemKind, ItemLibrary, LibraryItem, Organization } from '~~/shared/types'
+import type {
+  ItemKind,
+  ItemLibrary,
+  LibraryItem,
+  LibraryScope,
+  Organization,
+  Venue,
+} from '~~/shared/types'
 
 const route = useRoute()
+const router = useRouter()
 const orgSlug = computed(() => String(route.params.org))
+const venueSlug = computed(() => {
+  const q = route.query.venue
+  return typeof q === 'string' && q ? q : ''
+})
+const libraryScope = computed<LibraryScope>(() => (venueSlug.value ? 'venue' : 'org'))
 
-const { data, refresh } = await useFetch<{ organization: Organization; library: ItemLibrary }>(
-  () => `/api/orgs/${orgSlug.value}/items`,
+const { data: venuesData } = await useFetch<{ organization: Organization; venues: Venue[] }>(
+  () => `/api/orgs/${orgSlug.value}/venues`,
 )
+
+const itemsUrl = computed(() =>
+  venueSlug.value
+    ? `/api/orgs/${orgSlug.value}/items?venue=${venueSlug.value}`
+    : `/api/orgs/${orgSlug.value}/items`,
+)
+
+const { data, refresh } = await useFetch<{
+  organization: Organization
+  venue: Venue | null
+  scope: LibraryScope
+  library: ItemLibrary
+}>(itemsUrl)
 
 const kinds: ItemKind[] = ['link', 'song', 'video', 'cta', 'resource']
 const filter = ref('')
+const kindFilter = ref<'all' | ItemKind>('all')
 const editing = ref<LibraryItem | null>(null)
 const draft = ref({
   id: '',
@@ -25,8 +52,16 @@ const draft = ref({
 const saving = ref(false)
 const error = ref('')
 
+const venues = computed(() => venuesData.value?.venues ?? [])
+const selectedVenue = computed(() =>
+  venues.value.find((venue) => venue.slug === venueSlug.value) ?? null,
+)
+
 const items = computed(() => {
-  const list = data.value?.library.items ?? []
+  let list = data.value?.library.items ?? []
+  if (kindFilter.value !== 'all') {
+    list = list.filter((item) => item.kind === kindFilter.value)
+  }
   const q = filter.value.trim().toLowerCase()
   if (!q) return list
   return list.filter(
@@ -34,9 +69,18 @@ const items = computed(() => {
       item.title.toLowerCase().includes(q)
       || item.meta.toLowerCase().includes(q)
       || item.kind.includes(q)
+      || item.href.toLowerCase().includes(q)
       || (item.tags ?? []).some((tag) => tag.toLowerCase().includes(q)),
   )
 })
+
+function setScope(next: string) {
+  if (!next) {
+    router.replace({ path: route.path, query: {} })
+    return
+  }
+  router.replace({ path: route.path, query: { venue: next } })
+}
 
 function openNew() {
   editing.value = null
@@ -68,6 +112,11 @@ function openEdit(item: LibraryItem) {
   }
 }
 
+watch(venueSlug, () => {
+  openNew()
+  error.value = ''
+})
+
 async function saveItem() {
   if (!draft.value.title.trim()) {
     error.value = 'Title is required'
@@ -76,7 +125,7 @@ async function saveItem() {
   saving.value = true
   error.value = ''
   try {
-    await $fetch(`/api/orgs/${orgSlug.value}/items`, {
+    await $fetch(itemsUrl.value, {
       method: 'POST',
       body: {
         id: draft.value.id || undefined,
@@ -104,7 +153,8 @@ async function saveItem() {
 
 async function removeItem(item: LibraryItem) {
   if (!confirm(`Delete “${item.title}”?`)) return
-  await $fetch(`/api/orgs/${orgSlug.value}/items/${item.id}`, { method: 'DELETE' })
+  const query = venueSlug.value ? `?venue=${venueSlug.value}` : ''
+  await $fetch(`/api/orgs/${orgSlug.value}/items/${item.id}${query}`, { method: 'DELETE' })
   await refresh()
   if (editing.value?.id === item.id) openNew()
 }
@@ -118,11 +168,41 @@ async function removeItem(item: LibraryItem) {
         <p class="kicker">Item library</p>
         <h1>Add & edit items</h1>
         <p class="lede">
-          Reusable links, songs, videos, and CTAs. Use them later in the flow builder.
+          Reusable links, songs, videos, and CTAs.
+          {{ libraryScope === 'venue'
+            ? `Editing the ${selectedVenue?.name ?? 'campus'} library.`
+            : 'Editing the organization-shared library.' }}
         </p>
       </div>
       <NuxtLink class="btn ghost" :to="`/admin/o/${orgSlug}`">Done</NuxtLink>
     </header>
+
+    <div class="lib-filters">
+      <label class="scope-field">
+        <span>Show items from</span>
+        <select :value="venueSlug" @change="setScope(($event.target as HTMLSelectElement).value)">
+          <option value="">Organization shared</option>
+          <option v-for="venue in venues" :key="venue.id" :value="venue.slug">
+            {{ venue.name }} campus
+          </option>
+        </select>
+      </label>
+      <label class="scope-field">
+        <span>Type</span>
+        <select v-model="kindFilter">
+          <option value="all">All types</option>
+          <option v-for="kind in kinds" :key="kind" :value="kind">{{ kind }}</option>
+        </select>
+      </label>
+      <label class="scope-field search-field">
+        <span>Search</span>
+        <input
+          v-model="filter"
+          type="search"
+          placeholder="Search title, meta, tags, URL…"
+        >
+      </label>
+    </div>
 
     <div class="split">
       <section class="card">
@@ -177,9 +257,11 @@ async function removeItem(item: LibraryItem) {
       <section class="card">
         <div class="card-head">
           <h2>{{ items.length }} items</h2>
-          <input v-model="filter" class="search" type="search" placeholder="Filter…">
         </div>
-        <ul class="item-list">
+        <p v-if="!items.length" class="empty-list">
+          {{ filter.trim() ? 'No items match your search.' : 'No items in this library yet.' }}
+        </p>
+        <ul v-else class="item-list">
           <li v-for="item in items" :key="item.id">
             <button type="button" class="item-row" @click="openEdit(item)">
               <span class="kind">{{ item.kind }}</span>
@@ -239,6 +321,55 @@ h1 {
   max-width: 48ch;
 }
 
+.lib-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+  max-width: 40rem;
+}
+
+.scope-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.search-field {
+  grid-column: 1 / -1;
+}
+
+.scope-field select,
+.scope-field input[type='search'] {
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+  border: 1px solid rgba(26, 107, 99, 0.16);
+  border-radius: 10px;
+  padding: 0.6rem 0.7rem;
+  background: var(--white);
+}
+
+.empty-list {
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .lib-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
 .split {
   display: grid;
   grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.2fr);
@@ -286,8 +417,7 @@ label {
 }
 
 label input,
-label select,
-.search {
+label select {
   font: inherit;
   font-size: 0.95rem;
   font-weight: 600;

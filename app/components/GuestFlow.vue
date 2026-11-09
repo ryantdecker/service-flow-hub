@@ -120,16 +120,24 @@ const progressPct = computed(
                 </div>
               </figure>
               <ul class="links">
-                <li v-for="link in seg.links" :key="link.title">
+                <li v-for="(link, linkIndex) in seg.links" :key="`${seg.id}-${linkIndex}-${link.href}`">
                   <a
                     class="link-row"
-                    :class="{ cta: link.cta }"
+                    :class="{
+                      cta: link.cta || link.kind === 'cta',
+                      song: link.kind === 'song',
+                      resource: link.kind === 'resource',
+                    }"
                     :href="link.href"
                     @click="(e) => { if (!link.href || link.href === '#') e.preventDefault() }"
                   >
+                    <span
+                      v-if="link.kind && link.kind !== 'link' && link.kind !== 'cta'"
+                      class="link-kind"
+                    >{{ link.kind }}</span>
                     <span class="link-text">
                       <span class="link-title">{{ link.title }}</span>
-                      <span v-if="!link.cta" class="link-meta">{{ link.meta }}</span>
+                      <span v-if="!(link.cta || link.kind === 'cta')" class="link-meta">{{ link.meta }}</span>
                     </span>
                     <span class="link-arrow" aria-hidden="true">→</span>
                   </a>
@@ -419,9 +427,34 @@ const progressPct = computed(
   text-decoration: none;
 }
 
+.link-row.song {
+  background: rgba(26, 107, 99, 0.06);
+}
+
+.link-row.resource {
+  border-style: dashed;
+}
+
 .link-row.cta {
   background: var(--teal);
   border-color: var(--teal);
+}
+
+.link-kind {
+  flex: 0 0 auto;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--teal);
+  background: var(--teal-soft);
+  padding: 0.18rem 0.35rem;
+  border-radius: 6px;
+}
+
+.link-row.cta .link-kind {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
 }
 
 .link-title {

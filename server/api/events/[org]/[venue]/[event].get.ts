@@ -9,10 +9,19 @@ export default defineEventHandler(async (event) => {
   const org = await getOrganization(orgSlug)
   const venue = await getVenue(orgSlug, venueSlug)
   const record = await getEventBySlugs(orgSlug, venueSlug, eventSlug)
-  const library = await getItemLibrary(orgSlug)
-  if (!org || !venue || !record || !library) {
+  const orgLibrary = await getItemLibrary(orgSlug)
+  const venueLibrary = await getItemLibrary(orgSlug, venueSlug)
+  if (!org || !venue || !record || !orgLibrary || !venueLibrary) {
     throw createError({ statusCode: 404, statusMessage: 'Event not found' })
   }
 
-  return { organization: org, venue, event: record, library }
+  return {
+    organization: org,
+    venue,
+    event: record,
+    orgLibrary,
+    venueLibrary,
+    /** @deprecated prefer orgLibrary; kept for older clients */
+    library: orgLibrary,
+  }
 })

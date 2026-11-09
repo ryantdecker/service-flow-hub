@@ -5,7 +5,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Missing org or itemId' })
   }
 
-  const library = await deleteLibraryItem(orgSlug, itemId)
-  if (!library) throw createError({ statusCode: 404, statusMessage: 'Organization not found' })
+  const query = getQuery(event)
+  const venueSlug = typeof query.venue === 'string' && query.venue ? query.venue : undefined
+
+  const library = await deleteLibraryItem(orgSlug, itemId, venueSlug)
+  if (!library) throw createError({ statusCode: 404, statusMessage: 'Organization or venue not found' })
   return library
 })

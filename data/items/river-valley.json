@@ -7,7 +7,7 @@
       "title": "Campus map",
       "meta": "City Campus · parking & entrances",
       "href": "#",
-      "tags": ["welcome", "city"]
+      "cta": false
     },
     {
       "id": "item_kids",
@@ -15,7 +15,10 @@
       "title": "Kids",
       "meta": "Check-in · ages & rooms",
       "href": "#",
-      "tags": ["welcome", "kids"]
+      "tags": [
+        "welcome",
+        "kids"
+      ]
     },
     {
       "id": "item_youth",
@@ -23,7 +26,10 @@
       "title": "Youth",
       "meta": "Middle & high school",
       "href": "#",
-      "tags": ["welcome", "youth"]
+      "tags": [
+        "welcome",
+        "youth"
+      ]
     },
     {
       "id": "item_connect_card",
@@ -31,7 +37,10 @@
       "title": "Connect card",
       "meta": "New here? Tell us hello",
       "href": "#",
-      "tags": ["welcome", "connect"]
+      "tags": [
+        "welcome",
+        "connect"
+      ]
     },
     {
       "id": "item_song_praise",
@@ -39,7 +48,9 @@
       "title": "Praise",
       "meta": "Elevation Worship · listen / download",
       "href": "#",
-      "tags": ["worship"]
+      "tags": [
+        "worship"
+      ]
     },
     {
       "id": "item_song_goodness",
@@ -47,7 +58,9 @@
       "title": "Goodness of God",
       "meta": "Jenn Johnson · listen / download",
       "href": "#",
-      "tags": ["worship"]
+      "tags": [
+        "worship"
+      ]
     },
     {
       "id": "item_song_graves",
@@ -55,7 +68,9 @@
       "title": "Graves Into Gardens",
       "meta": "Brandon Lake · listen / download",
       "href": "#",
-      "tags": ["worship"]
+      "tags": [
+        "worship"
+      ]
     },
     {
       "id": "item_song_holy",
@@ -63,7 +78,9 @@
       "title": "Holy Forever",
       "meta": "Chris Tomlin · listen / download",
       "href": "#",
-      "tags": ["worship"]
+      "tags": [
+        "worship"
+      ]
     },
     {
       "id": "item_events_week",
@@ -71,7 +88,9 @@
       "title": "This week's events",
       "meta": "River Valley app",
       "href": "#",
-      "tags": ["announcements"]
+      "tags": [
+        "announcements"
+      ]
     },
     {
       "id": "item_serve",
@@ -79,7 +98,9 @@
       "title": "Serve on Sundays",
       "meta": "Volunteer teams",
       "href": "#",
-      "tags": ["announcements"]
+      "tags": [
+        "announcements"
+      ]
     },
     {
       "id": "item_gatherings",
@@ -87,7 +108,9 @@
       "title": "Upcoming gatherings",
       "meta": "City Campus",
       "href": "#",
-      "tags": ["announcements"]
+      "tags": [
+        "announcements"
+      ]
     },
     {
       "id": "item_miracle_video",
@@ -97,7 +120,10 @@
       "href": "#",
       "caption": "Tap play to re-watch",
       "embedUrl": "",
-      "tags": ["video", "miracle"]
+      "tags": [
+        "video",
+        "miracle"
+      ]
     },
     {
       "id": "item_miracle_cta",
@@ -106,7 +132,9 @@
       "meta": "Miracle Offering · next steps",
       "href": "#",
       "cta": true,
-      "tags": ["miracle"]
+      "tags": [
+        "miracle"
+      ]
     },
     {
       "id": "item_give_online",
@@ -114,7 +142,9 @@
       "title": "Give online",
       "meta": "Tithe.ly · River Valley Church",
       "href": "#",
-      "tags": ["giving"]
+      "tags": [
+        "giving"
+      ]
     },
     {
       "id": "item_give_text",
@@ -122,7 +152,9 @@
       "title": "Text to give",
       "meta": "Tithe.ly · City Campus",
       "href": "#",
-      "tags": ["giving"]
+      "tags": [
+        "giving"
+      ]
     },
     {
       "id": "item_sermon_notes",
@@ -130,7 +162,9 @@
       "title": "Sermon notes",
       "meta": "Pastor Rob Ketterling",
       "href": "#",
-      "tags": ["sermon"]
+      "tags": [
+        "sermon"
+      ]
     },
     {
       "id": "item_scripture",
@@ -138,7 +172,9 @@
       "title": "Scripture reading",
       "meta": "Today's passage",
       "href": "#",
-      "tags": ["sermon"]
+      "tags": [
+        "sermon"
+      ]
     },
     {
       "id": "item_discussion",
@@ -146,7 +182,9 @@
       "title": "Discussion guide",
       "meta": "For groups this week",
       "href": "#",
-      "tags": ["sermon"]
+      "tags": [
+        "sermon"
+      ]
     },
     {
       "id": "item_get_connected",
@@ -154,7 +192,9 @@
       "title": "Get connected",
       "meta": "Groups, serve & next steps",
       "href": "#",
-      "tags": ["post"]
+      "tags": [
+        "post"
+      ]
     },
     {
       "id": "item_parking",
@@ -162,7 +202,9 @@
       "title": "Parking validation",
       "meta": "Scan or show at exit",
       "href": "#",
-      "tags": ["post"]
+      "tags": [
+        "post"
+      ]
     }
   ]
 }

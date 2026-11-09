@@ -11,50 +11,49 @@ import type {
 } from '../../shared/types'
 
 /**
- * Eagerly bundle JSON seeds into the server build.
- * Required on Vercel: filesystem `data/` is not available in the lambda unless traced.
+ * Seed data is bundled via `nitro.serverAssets` (baseName: data) in nuxt.config.ts.
+ * Local/dev prefers the live filesystem so admin edits persist; serverless falls back
+ * to the bundled asset storage + an in-memory write overlay.
  */
-const organizationModules = import.meta.glob('../../data/organizations/*.json', { eager: true })
-const venueModules = import.meta.glob('../../data/venues/*.json', { eager: true })
-const eventModules = import.meta.glob('../../data/events/*.json', { eager: true })
-const itemModules = import.meta.glob('../../data/items/*.json', { eager: true })
-
 const dataRoot = path.join(process.cwd(), 'data')
 
 /** Ephemeral write overlay for serverless (lost on cold start). Local fs writes still preferred. */
 const memoryOverlay = new Map<string, unknown>()
 
-function unwrap<T>(mod: unknown): T {
-  if (mod && typeof mod === 'object' && 'default' in mod) {
-    return (mod as { default: T }).default
-  }
-  return mod as T
-}
-
-function fileKeyFromGlob(globPath: string) {
-  // e.g. ../../data/organizations/river-valley.json -> organizations/river-valley.json
-  const marker = '/data/'
-  const idx = globPath.replace(/\\/g, '/').lastIndexOf(marker)
-  if (idx === -1) return globPath.split('/').slice(-2).join('/')
-  return globPath.replace(/\\/g, '/').slice(idx + marker.length)
-}
-
 function clone<T>(value: T): T {
   return structuredClone(value)
 }
 
-function loadGlobMap<T>(modules: Record<string, unknown>) {
-  const map = new Map<string, T>()
-  for (const [globPath, mod] of Object.entries(modules)) {
-    map.set(fileKeyFromGlob(globPath), unwrap<T>(mod))
+function parseJsonValue<T>(value: unknown): T | null {
+  if (value == null) return null
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T
+    } catch {
+      return null
+    }
   }
-  return map
+  if (typeof value === 'object') return clone(value as T)
+  return null
 }
 
-const seededOrganizations = loadGlobMap<Organization>(organizationModules)
-const seededVenues = loadGlobMap<Venue>(venueModules)
-const seededEvents = loadGlobMap<EventRecord>(eventModules)
-const seededItems = loadGlobMap<ItemLibrary>(itemModules)
+function assetStorage() {
+  return useStorage('assets:server')
+}
+
+/** Nitro serverAssets keys look like `data:organizations/river-valley.json`. */
+function assetKey(relativeKey: string) {
+  return `data:${relativeKey}`
+}
+
+async function readSeededJson<T>(relativeKey: string): Promise<T | null> {
+  try {
+    const raw = await assetStorage().getItem(assetKey(relativeKey))
+    return parseJsonValue<T>(raw)
+  } catch {
+    return null
+  }
+}
 
 async function readJsonFile<T>(relativeKey: string): Promise<T | null> {
   if (memoryOverlay.has(relativeKey)) {
@@ -69,12 +68,7 @@ async function readJsonFile<T>(relativeKey: string): Promise<T | null> {
     // fall through to bundled seed
   }
 
-  const seeded =
-    seededOrganizations.get(relativeKey)
-    ?? seededVenues.get(relativeKey)
-    ?? seededEvents.get(relativeKey)
-    ?? seededItems.get(relativeKey)
-  return seeded ? clone(seeded as T) : null
+  return readSeededJson<T>(relativeKey)
 }
 
 async function writeJson(relativeKey: string, value: unknown) {
@@ -87,6 +81,25 @@ async function writeJson(relativeKey: string, value: unknown) {
     await fs.rename(tmp, filePath)
   } catch {
     // Serverless / read-only FS: memory overlay still serves subsequent reads on this instance
+  }
+}
+
+async function listSeededKeys(subdir: string): Promise<string[]> {
+  try {
+    const keys = await assetStorage().getKeys(`data:${subdir}`)
+    return keys
+      .map((key) => key.replace(/^data:/, '').replace(/^data\//, ''))
+      .filter((key) => key.startsWith(`${subdir}/`) && key.endsWith('.json'))
+  } catch {
+    // Some storage drivers want slash-style prefixes; try a broader scan.
+    try {
+      const keys = await assetStorage().getKeys('data')
+      return keys
+        .map((key) => key.replace(/^data:/, '').replace(/^data\//, ''))
+        .filter((key) => key.startsWith(`${subdir}/`) && key.endsWith('.json'))
+    } catch {
+      return []
+    }
   }
 }
 
@@ -107,22 +120,7 @@ async function listJsonKeys(subdir: string): Promise<string[]> {
     // ignore missing dir on serverless
   }
 
-  const seeded =
-    subdir === 'organizations'
-      ? seededOrganizations
-      : subdir === 'venues'
-        ? seededVenues
-        : subdir === 'events'
-          ? seededEvents
-          : subdir === 'items'
-            ? seededItems
-            : null
-
-  if (seeded) {
-    for (const key of seeded.keys()) {
-      if (key.startsWith(prefix) && key.endsWith('.json')) keys.add(key)
-    }
-  }
+  for (const key of await listSeededKeys(subdir)) keys.add(key)
 
   return [...keys].sort()
 }
@@ -160,9 +158,9 @@ export async function listEvents(opts?: {
   venueId?: string
 }): Promise<EventRecord[]> {
   const keys = await listJsonKeys('events')
-  const events = (await Promise.all(keys.map((key) => readJsonFile<EventRecord>(key)))).filter(
-    (event): event is EventRecord => Boolean(event),
-  )
+  const events = (await Promise.all(keys.map((key) => readJsonFile<EventRecord>(key))))
+    .filter((event): event is EventRecord => Boolean(event))
+    .map(normalizeEvent)
   return events.filter((event) => {
     if (opts?.organizationId && event.organizationId !== opts.organizationId) return false
     if (opts?.venueId && event.venueId !== opts.venueId) return false
@@ -170,32 +168,257 @@ export async function listEvents(opts?: {
   })
 }
 
+function normalizeEvent(event: EventRecord): EventRecord {
+  return {
+    ...event,
+    systemName: event.systemName?.trim() || event.title,
+    title: event.title?.trim() || event.systemName || 'Untitled event',
+  }
+}
+
+/**
+ * Rebuild guest snapshots (links/video) from the current libraries.
+ * `itemIds` / `videoItemId` stay the source of truth for membership + order.
+ */
+export async function rehydrateEvent(
+  event: EventRecord,
+  orgSlug: string,
+  venueSlug: string,
+): Promise<EventRecord> {
+  const { itemsById } = await getMergedItemMap(orgSlug, venueSlug)
+  return {
+    ...event,
+    segments: event.segments.map((seg) =>
+      hydrateSegmentFromItems(
+        {
+          id: seg.id,
+          label: seg.label,
+          desc: seg.desc,
+          itemIds: seg.itemIds,
+          videoItemId: seg.videoItemId,
+        },
+        itemsById,
+      ),
+    ),
+  }
+}
+
 export async function getEventBySlugs(
   orgSlug: string,
   venueSlug: string,
   eventSlug: string,
 ): Promise<EventRecord | null> {
-  return readJsonFile<EventRecord>(`events/${orgSlug}__${venueSlug}__${eventSlug}.json`)
+  const event = await readJsonFile<EventRecord>(`events/${orgSlug}__${venueSlug}__${eventSlug}.json`)
+  if (!event) return null
+  return rehydrateEvent(normalizeEvent(event), orgSlug, venueSlug)
 }
 
 export async function getEventFilePath(event: EventRecord, orgSlug: string, venueSlug: string) {
   return `events/${orgSlug}__${venueSlug}__${event.slug}.json`
 }
 
-export async function getItemLibrary(orgSlug: string): Promise<ItemLibrary | null> {
-  const org = await getOrganization(orgSlug)
-  if (!org) return null
-  const library = await readJsonFile<ItemLibrary>(`items/${orgSlug}.json`)
-  return library ?? { organizationId: org.id, items: [] }
+function slugifyTitle(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48) || 'flow'
 }
 
-export async function saveItemLibrary(orgSlug: string, library: ItemLibrary) {
-  await writeJson(`items/${orgSlug}.json`, library)
+async function uniqueEventSlug(orgSlug: string, venueSlug: string, baseSlug: string) {
+  let candidate = baseSlug
+  let n = 2
+  while (await getEventBySlugs(orgSlug, venueSlug, candidate)) {
+    candidate = `${baseSlug}-${n}`
+    n += 1
+  }
+  return candidate
+}
+
+/**
+ * Deep-copy an event flow into a new draft event at the same venue.
+ * Regenerates event + segment ids; keeps library item references.
+ */
+export async function cloneEventFlow(
+  orgSlug: string,
+  venueSlug: string,
+  eventSlug: string,
+  opts?: { systemName?: string; title?: string; slug?: string },
+) {
+  const source = await getEventBySlugs(orgSlug, venueSlug, eventSlug)
+  if (!source) return null
+
+  const systemName = (opts?.systemName?.trim() || `${source.systemName} (copy)`).trim()
+  const title = (opts?.title?.trim() || source.title).trim()
+  const baseSlug = opts?.slug?.trim()
+    ? slugifyTitle(opts.slug)
+    : `${slugifyTitle(systemName)}`
+  const slug = await uniqueEventSlug(orgSlug, venueSlug, baseSlug)
+
+  const idMap = new Map<string, string>()
+  const segments = source.segments.map((seg) => {
+    const id = newId('seg')
+    idMap.set(seg.id, id)
+    return {
+      ...structuredClone(seg),
+      id,
+    }
+  })
+
+  const schedule = source.schedule.map((beat) => ({
+    segmentId: idMap.get(beat.segmentId) ?? beat.segmentId,
+    startsAt: beat.startsAt,
+  }))
+
+  const firstSegId = segments[0]?.id
+  const mappedCurrent = source.liveState.currentSegmentId
+    ? idMap.get(source.liveState.currentSegmentId)
+    : undefined
+
+  const cloned: EventRecord = {
+    ...structuredClone(source),
+    id: newId('evt'),
+    slug,
+    systemName,
+    title,
+    status: 'draft',
+    segments,
+    schedule,
+    liveState: {
+      currentSegmentId: mappedCurrent ?? firstSegId ?? '',
+      mode: 'scheduled',
+      updatedAt: new Date().toISOString(),
+    },
+  }
+
+  await writeJson(await getEventFilePath(cloned, orgSlug, venueSlug), cloned)
+  return cloned
+}
+
+/**
+ * Create a blank draft event/flow at a venue with one empty segment.
+ */
+export async function createEventFlow(
+  orgSlug: string,
+  venueSlug: string,
+  opts: { systemName: string; title?: string; startsAt?: string; slug?: string },
+) {
+  const org = await getOrganization(orgSlug)
+  const venue = await getVenue(orgSlug, venueSlug)
+  if (!org || !venue) return null
+
+  const systemName = opts.systemName.trim()
+  if (!systemName) return null
+  const title = (opts.title?.trim() || systemName).trim()
+
+  const slug = await uniqueEventSlug(
+    orgSlug,
+    venueSlug,
+    opts.slug?.trim() ? slugifyTitle(opts.slug) : slugifyTitle(systemName),
+  )
+
+  const startsAt = opts.startsAt?.trim() || defaultEventStartsAt(venue.timezone)
+  const segmentId = newId('seg')
+
+  const created: EventRecord = {
+    id: newId('evt'),
+    organizationId: org.id,
+    venueId: venue.id,
+    slug,
+    systemName,
+    title,
+    startsAt,
+    status: 'draft',
+    segments: [
+      {
+        id: segmentId,
+        label: 'Welcome',
+        desc: '',
+        itemIds: [],
+        links: [],
+      },
+    ],
+    schedule: [{ segmentId, startsAt }],
+    liveState: {
+      currentSegmentId: segmentId,
+      mode: 'scheduled',
+      updatedAt: new Date().toISOString(),
+    },
+  }
+
+  await writeJson(await getEventFilePath(created, orgSlug, venueSlug), created)
+  return created
+}
+
+function defaultEventStartsAt(timezone: string) {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  // Keep a stable local-wall offset for Phase 0 JSON; venue timezone is recorded separately.
+  void timezone
+  return `${y}-${m}-${d}T09:00:00-06:00`
+}
+
+function itemsRelativeKey(orgSlug: string, venueSlug?: string) {
+  return venueSlug ? `items/${orgSlug}__${venueSlug}.json` : `items/${orgSlug}.json`
+}
+
+export async function getItemLibrary(
+  orgSlug: string,
+  venueSlug?: string,
+): Promise<ItemLibrary | null> {
+  const org = await getOrganization(orgSlug)
+  if (!org) return null
+
+  let venueId: string | undefined
+  if (venueSlug) {
+    const venue = await getVenue(orgSlug, venueSlug)
+    if (!venue) return null
+    venueId = venue.id
+  }
+
+  const library = await readJsonFile<ItemLibrary>(itemsRelativeKey(orgSlug, venueSlug))
+  return (
+    library ?? {
+      organizationId: org.id,
+      venueId,
+      items: [],
+    }
+  )
+}
+
+export async function getMergedItemMap(orgSlug: string, venueSlug?: string) {
+  const orgLibrary = await getItemLibrary(orgSlug)
+  const venueLibrary = venueSlug ? await getItemLibrary(orgSlug, venueSlug) : null
+  const map = new Map<string, LibraryItem>()
+  for (const item of orgLibrary?.items ?? []) map.set(item.id, item)
+  // Venue items override org items with the same id
+  for (const item of venueLibrary?.items ?? []) map.set(item.id, item)
+  return {
+    orgLibrary,
+    venueLibrary,
+    itemsById: map,
+    allItems: [...map.values()],
+  }
+}
+
+export async function saveItemLibrary(
+  orgSlug: string,
+  library: ItemLibrary,
+  venueSlug?: string,
+) {
+  await writeJson(itemsRelativeKey(orgSlug, venueSlug), library)
   return library
 }
 
-export async function upsertLibraryItem(orgSlug: string, item: Partial<LibraryItem> & { title: string }) {
-  const library = await getItemLibrary(orgSlug)
+export async function upsertLibraryItem(
+  orgSlug: string,
+  item: Partial<LibraryItem> & { title: string },
+  venueSlug?: string,
+) {
+  const library = await getItemLibrary(orgSlug, venueSlug)
   if (!library) return null
 
   if (item.id) {
@@ -216,15 +439,19 @@ export async function upsertLibraryItem(orgSlug: string, item: Partial<LibraryIt
     })
   }
 
-  await saveItemLibrary(orgSlug, library)
+  await saveItemLibrary(orgSlug, library, venueSlug)
   return library
 }
 
-export async function deleteLibraryItem(orgSlug: string, itemId: string) {
-  const library = await getItemLibrary(orgSlug)
+export async function deleteLibraryItem(
+  orgSlug: string,
+  itemId: string,
+  venueSlug?: string,
+) {
+  const library = await getItemLibrary(orgSlug, venueSlug)
   if (!library) return null
   library.items = library.items.filter((item) => item.id !== itemId)
-  await saveItemLibrary(orgSlug, library)
+  await saveItemLibrary(orgSlug, library, venueSlug)
   return library
 }
 
@@ -232,7 +459,11 @@ export function hydrateSegmentFromItems(
   segment: Pick<Segment, 'id' | 'label' | 'desc' | 'itemIds' | 'videoItemId'>,
   itemsById: Map<string, LibraryItem>,
 ): Segment {
-  const itemIds = segment.itemIds ?? []
+  // Keep caller order. Persist ids even if a library lookup misses; only links need resolves.
+  const itemIds = (segment.itemIds ?? []).filter((id) => {
+    const item = itemsById.get(id)
+    return !item || item.kind !== 'video'
+  })
   const links = itemIds
     .map((id) => itemsById.get(id))
     .filter((item): item is LibraryItem => Boolean(item) && item.kind !== 'video')
@@ -241,6 +472,7 @@ export function hydrateSegmentFromItems(
       meta: item.meta,
       href: item.href || '#',
       cta: item.cta || item.kind === 'cta',
+      kind: item.kind as Exclude<LibraryItem['kind'], 'video'>,
     }))
 
   const videoItem = segment.videoItemId ? itemsById.get(segment.videoItemId) : undefined
@@ -282,6 +514,7 @@ export async function saveEventFlow(
   venueSlug: string,
   eventSlug: string,
   input: {
+    systemName?: string
     title?: string
     startsAt?: string
     endsAt?: string
@@ -289,10 +522,8 @@ export async function saveEventFlow(
   },
 ) {
   const event = await getEventBySlugs(orgSlug, venueSlug, eventSlug)
-  const library = await getItemLibrary(orgSlug)
-  if (!event || !library) return null
-
-  const itemsById = new Map(library.items.map((item) => [item.id, item]))
+  if (!event) return null
+  const { itemsById } = await getMergedItemMap(orgSlug, venueSlug)
   const startsAt = input.startsAt ?? event.startsAt
 
   const segments = input.segments.map((seg) =>
@@ -315,7 +546,8 @@ export async function saveEventFlow(
 
   const next: EventRecord = {
     ...event,
-    title: input.title ?? event.title,
+    systemName: input.systemName?.trim() || event.systemName,
+    title: input.title?.trim() || event.title,
     startsAt,
     endsAt: input.endsAt ?? event.endsAt,
     segments,
@@ -353,10 +585,12 @@ export async function resolveVenueLive(orgSlug: string, venueSlug: string) {
     .filter((event) => event.status === 'ended')
     .sort((a, b) => b.startsAt.localeCompare(a.startsAt))[0]
 
+  const featured = live ?? upcoming ?? ended ?? null
+
   return {
     organization: org,
     venue,
-    event: live ?? upcoming ?? ended ?? null,
+    event: featured ? await rehydrateEvent(featured, orgSlug, venueSlug) : null,
     events,
   }
 }

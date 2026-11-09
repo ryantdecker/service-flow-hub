@@ -1,0 +1,304 @@
+{
+  "organizationId": "org_river_valley",
+  "venueId": "venue_rv_city",
+  "items": [
+    {
+      "id": "item_city_wifi",
+      "kind": "resource",
+      "title": "Guest Wi‑Fi",
+      "meta": "City Campus · network details",
+      "href": "#",
+      "tags": [
+        "city",
+        "welcome"
+      ]
+    },
+    {
+      "id": "item_city_parking_map",
+      "kind": "resource",
+      "title": "Downtown parking map",
+      "meta": "City Campus · ramps & validation",
+      "href": "#",
+      "tags": [
+        "city",
+        "parking"
+      ]
+    },
+    {
+      "id": "item_city_kids_registration",
+      "kind": "link",
+      "title": "River Valley Kids registration",
+      "meta": "New family registration · City Campus",
+      "href": "https://rivervalley.churchcenter.com/people/forms/1195762",
+      "cta": true,
+      "tags": [
+        "city",
+        "kids",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_occ_angel_tree",
+      "kind": "link",
+      "title": "Operation Christmas Child & Angel Tree",
+      "meta": "Upcoming at City Campus",
+      "href": "https://www.rivervalley.org/impact/occ",
+      "tags": [
+        "city",
+        "upcoming",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_holy_spirit_retreat",
+      "kind": "link",
+      "title": "Holy Spirit Retreat",
+      "meta": "November 7 · City Campus",
+      "href": "https://rivervalley.churchcenter.com/registrations/events/3883779",
+      "tags": [
+        "city",
+        "upcoming",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_first_saturday_serve",
+      "kind": "link",
+      "title": "First Saturday Serve",
+      "meta": "November 7 · City Campus",
+      "href": "https://rivervalley.churchcenter.com/registrations/events/3882562",
+      "tags": [
+        "city",
+        "upcoming",
+        "serve",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_child_dedications",
+      "kind": "link",
+      "title": "Child Dedications",
+      "meta": "November 8 & 9 · City Campus",
+      "href": "https://rivervalley.churchcenter.com/registrations/events/3195429",
+      "tags": [
+        "city",
+        "upcoming",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_welcome_home",
+      "kind": "link",
+      "title": "Welcome Home",
+      "meta": "November 8 · City Campus",
+      "href": "https://rivervalley.churchcenter.com/groups/welcome-home/welcome-home-city-november",
+      "tags": [
+        "city",
+        "upcoming",
+        "connect",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_young_adult_night",
+      "kind": "link",
+      "title": "Young Adult Night",
+      "meta": "November 19 · City Campus",
+      "href": "https://rivervalley.churchcenter.com/calendar/event/240736917",
+      "tags": [
+        "city",
+        "upcoming",
+        "young-adults",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_freedom_encounter",
+      "kind": "link",
+      "title": "Freedom Encounter",
+      "meta": "November 20 & 21 · City Campus",
+      "href": "https://rivervalley.churchcenter.com/registrations/events/3916033",
+      "tags": [
+        "city",
+        "upcoming",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_christmas_spectacular",
+      "kind": "link",
+      "title": "Christmas Spectacular",
+      "meta": "December 4, 5 & 6",
+      "href": "https://www.rivervalley.org/events/christmas",
+      "tags": [
+        "city",
+        "upcoming",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_small_groups_info",
+      "kind": "link",
+      "title": "Small Groups & Core Groups",
+      "meta": "Get connected · City Campus",
+      "href": "https://www.rivervalley.org/connect/groups",
+      "tags": [
+        "city",
+        "connect",
+        "groups",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_connect_card",
+      "kind": "cta",
+      "title": "Connect Card",
+      "meta": "New here? Tell us hello",
+      "href": "https://rivervalley.churchcenter.com/people/forms/829230",
+      "cta": true,
+      "tags": [
+        "city",
+        "connect",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_dream_team",
+      "kind": "link",
+      "title": "Join a Dream Team",
+      "meta": "Serve at River Valley",
+      "href": "https://rivervalley.org/serve",
+      "tags": [
+        "city",
+        "serve",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_join_small_group",
+      "kind": "link",
+      "title": "Join a Small Group",
+      "meta": "Open signup · City Campus",
+      "href": "https://rivervalley.churchcenter.com/groups/small-groups?enrollment=open_signup%2Crequest_to_join&filter=enrollment%2Ctag&tag_id=1998141",
+      "tags": [
+        "city",
+        "connect",
+        "groups",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_global_teams",
+      "kind": "link",
+      "title": "Upcoming Global Teams",
+      "meta": "Missions & trips",
+      "href": "https://rivervalley.org/global-teams/",
+      "tags": [
+        "city",
+        "global",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_yth",
+      "kind": "link",
+      "title": "River Valley YTH",
+      "meta": "Sundays during the 11am service · City",
+      "href": "https://rivervalley.churchcenter.com/calendar/event/168866136",
+      "tags": [
+        "city",
+        "youth",
+        "next-gen",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_serve_kids",
+      "kind": "link",
+      "title": "Serve in River Valley Kids",
+      "meta": "Volunteer at City Campus",
+      "href": "https://rivervalley.churchcenter.com/people/forms/800176",
+      "tags": [
+        "city",
+        "kids",
+        "serve",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_rvli",
+      "kind": "link",
+      "title": "River Valley Leadership Institute",
+      "meta": "Next generation leadership",
+      "href": "https://www.rvli.org/",
+      "tags": [
+        "city",
+        "next-gen",
+        "leadership",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_global_33",
+      "kind": "link",
+      "title": "Global 33 Movement",
+      "meta": "Next generation · Global 33",
+      "href": "https://linktr.ee/global33movement",
+      "tags": [
+        "city",
+        "next-gen",
+        "global",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_soap",
+      "kind": "resource",
+      "title": "Daily Bible Reading",
+      "meta": "SOAP reading plan",
+      "href": "https://rivervalley.org/soap",
+      "tags": [
+        "city",
+        "resources",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_events_calendar",
+      "kind": "resource",
+      "title": "River Valley Events Calendar",
+      "meta": "All campuses",
+      "href": "http://cal.ae/oiahsew",
+      "tags": [
+        "city",
+        "resources",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_map",
+      "kind": "resource",
+      "title": "Learn More About the MAP",
+      "meta": "River Valley 500",
+      "href": "https://www.rivervalley.org/connect/river-valley-500",
+      "tags": [
+        "city",
+        "resources",
+        "linktree"
+      ]
+    },
+    {
+      "id": "item_city_give",
+      "kind": "cta",
+      "title": "Give",
+      "meta": "Support River Valley",
+      "href": "https://rivervalley.org/give",
+      "cta": true,
+      "tags": [
+        "city",
+        "giving",
+        "linktree"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "id": "evt_rv_city_wednesday_night",
+  "organizationId": "org_river_valley",
+  "venueId": "venue_rv_city",
+  "slug": "wednesday-night",
+  "systemName": "City Wednesday Night",
+  "title": "Wednesday Night",
+  "startsAt": "2026-11-09T09:00:00-06:00",
+  "status": "draft",
+  "segments": [
+    {
+      "id": "seg_wednesday_welcome",
+      "label": "Welcome",
+      "desc": "",
+      "itemIds": [],
+      "links": []
+    }
+  ],
+  "schedule": [
+    {
+      "segmentId": "seg_wednesday_welcome",
+      "startsAt": "2026-11-09T09:00:00-06:00"
+    }
+  ],
+  "liveState": {
+    "currentSegmentId": "seg_wednesday_welcome",
+    "mode": "scheduled",
+    "updatedAt": "2026-11-09T16:20:00.000Z"
+  }
+}
