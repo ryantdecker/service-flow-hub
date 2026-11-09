@@ -197,27 +197,51 @@ async function saveFlow() {
           <button type="button" class="btn sm" @click="addSegment">Add segment</button>
         </div>
         <ul class="seg-list">
-          <li v-for="(row, index) in rows" :key="row.id" class="seg-li">
-            <button
-              type="button"
-              class="seg-row"
-              :class="{ selected: index === selectedRow }"
-              @click="selectedRow = index"
-            >
-              <span class="idx">{{ String(index + 1).padStart(2, '0') }}</span>
-              <span class="copy">
-                <strong>{{ row.label || 'Untitled' }}</strong>
-                <span class="meta">
-                  {{ row.startTime }} · {{ row.itemIds.length }} item{{ row.itemIds.length === 1 ? '' : 's' }}
-                  <template v-if="row.videoItemId"> · video</template>
+          <li
+            v-for="(row, index) in rows"
+            :key="row.id"
+            class="seg-li"
+            :class="{ selected: index === selectedRow }"
+          >
+            <div class="seg-header">
+              <button
+                type="button"
+                class="seg-row"
+                @click="selectedRow = index"
+              >
+                <span class="idx">{{ String(index + 1).padStart(2, '0') }}</span>
+                <span class="copy">
+                  <strong>{{ row.label || 'Untitled' }}</strong>
+                  <span class="meta">{{ row.startTime }}</span>
                 </span>
-              </span>
-            </button>
-            <div class="seg-tools">
-              <button type="button" class="icon" :disabled="index === 0" @click="moveSegment(index, -1)">↑</button>
-              <button type="button" class="icon" :disabled="index === rows.length - 1" @click="moveSegment(index, 1)">↓</button>
-              <button type="button" class="icon danger" :disabled="rows.length <= 1" @click="removeSegment(index)">×</button>
+              </button>
+              <div class="seg-tools">
+                <button type="button" class="icon" :disabled="index === 0" @click="moveSegment(index, -1)">↑</button>
+                <button type="button" class="icon" :disabled="index === rows.length - 1" @click="moveSegment(index, 1)">↓</button>
+                <button type="button" class="icon danger" :disabled="rows.length <= 1" @click="removeSegment(index)">×</button>
+              </div>
             </div>
+
+            <ul class="nested-items" @click="selectedRow = index">
+              <li v-if="row.videoItemId" class="nested-item video">
+                <span class="nested-kind">video</span>
+                <span class="nested-title">{{ itemById(row.videoItemId)?.title ?? row.videoItemId }}</span>
+              </li>
+              <li
+                v-for="itemId in row.itemIds"
+                :key="itemId"
+                class="nested-item"
+              >
+                <span class="nested-kind">{{ itemById(itemId)?.kind ?? 'item' }}</span>
+                <span class="nested-title">{{ itemById(itemId)?.title ?? itemId }}</span>
+              </li>
+              <li
+                v-if="!row.itemIds.length && !row.videoItemId"
+                class="nested-item empty"
+              >
+                No items yet
+              </li>
+            </ul>
           </li>
         </ul>
       </section>
@@ -474,9 +498,26 @@ h1 {
 }
 
 .seg-li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.55rem 0.55rem 0.6rem;
+  border: 1px solid rgba(26, 107, 99, 0.1);
+  background: var(--gray-wash);
+  border-radius: 12px;
+}
+
+.seg-li.selected {
+  border-color: rgba(26, 107, 99, 0.35);
+  box-shadow: 0 0 0 3px var(--teal-soft);
+  background: #fff;
+}
+
+.seg-header {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 0.35rem;
+  align-items: start;
 }
 
 .seg-row {
@@ -485,17 +526,63 @@ h1 {
   align-items: center;
   width: 100%;
   text-align: left;
-  border: 1px solid rgba(26, 107, 99, 0.1);
-  background: var(--gray-wash);
-  border-radius: 11px;
-  padding: 0.7rem 0.75rem;
+  border: none;
+  background: transparent;
+  padding: 0.2rem 0.2rem;
   cursor: pointer;
 }
 
-.seg-row.selected {
-  border-color: rgba(26, 107, 99, 0.35);
-  box-shadow: 0 0 0 3px var(--teal-soft);
-  background: #fff;
+.nested-items {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  margin: 0 0 0 1.85rem;
+  padding: 0;
+}
+
+.nested-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(26, 107, 99, 0.08);
+  cursor: pointer;
+}
+
+.nested-item.video {
+  background: rgba(13, 63, 60, 0.06);
+}
+
+.nested-item.empty {
+  color: var(--ink-faint);
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-style: dashed;
+}
+
+.nested-kind {
+  flex: 0 0 auto;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--teal);
+  background: var(--teal-soft);
+  padding: 0.14rem 0.32rem;
+  border-radius: 5px;
+}
+
+.nested-title {
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .idx {
