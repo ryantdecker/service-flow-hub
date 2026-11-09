@@ -367,7 +367,7 @@ export const SEED_JSON: Record<string, unknown> = {
     {
       "id": "announcements",
       "label": "Announcements",
-      "desc": "What's next at River Valley—sign up while it's fresh.",
+      "desc": "Learn more about the opportunities that were highlighted during the service",
       "itemIds": [
         "item_city_dream_team",
         "item_city_occ_angel_tree",
