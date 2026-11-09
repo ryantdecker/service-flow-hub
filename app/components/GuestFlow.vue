@@ -131,13 +131,9 @@ const progressPct = computed(
                     :href="link.href"
                     @click="(e) => { if (!link.href || link.href === '#') e.preventDefault() }"
                   >
-                    <span
-                      v-if="link.kind && link.kind !== 'link' && link.kind !== 'cta'"
-                      class="link-kind"
-                    >{{ link.kind }}</span>
                     <span class="link-text">
                       <span class="link-title">{{ link.title }}</span>
-                      <span v-if="!(link.cta || link.kind === 'cta')" class="link-meta">{{ link.meta }}</span>
+                      <span v-if="link.meta" class="link-meta">{{ link.meta }}</span>
                     </span>
                     <span class="link-arrow" aria-hidden="true">→</span>
                   </a>
@@ -266,13 +262,11 @@ const progressPct = computed(
 
 .segment.past,
 .segment.upcoming {
-  opacity: 0.72;
   background: rgba(255, 255, 255, 0.28);
   border-color: rgba(26, 107, 99, 0.08);
 }
 
 .segment.current {
-  opacity: 1;
   background: var(--white);
   border-color: rgba(26, 107, 99, 0.16);
   box-shadow: var(--shadow);
@@ -440,27 +434,19 @@ const progressPct = computed(
   border-color: var(--teal);
 }
 
-.link-kind {
-  flex: 0 0 auto;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--teal);
-  background: var(--teal-soft);
-  padding: 0.18rem 0.35rem;
-  border-radius: 6px;
-}
-
-.link-row.cta .link-kind {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+.link-text {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
 .link-title {
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--teal-deep);
+  line-height: 1.25;
 }
 
 .link-row.cta .link-title {
@@ -468,9 +454,15 @@ const progressPct = computed(
 }
 
 .link-meta {
+  display: block;
   font-size: 0.75rem;
   color: var(--ink-faint);
   font-weight: 600;
+  line-height: 1.3;
+}
+
+.link-row.cta .link-meta {
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .link-arrow {

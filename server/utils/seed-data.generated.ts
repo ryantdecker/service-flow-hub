@@ -247,9 +247,9 @@ export const SEED_JSON: Record<string, unknown> = {
   "endsAt": "2026-11-09T10:20:00-06:00",
   "status": "live",
   "liveState": {
-    "currentSegmentId": "giving",
+    "currentSegmentId": "announcements",
     "mode": "override",
-    "updatedAt": "2026-11-08T19:36:21.424Z"
+    "updatedAt": "2026-11-09T17:54:01.052Z"
   },
   "schedule": [
     {
@@ -297,25 +297,29 @@ export const SEED_JSON: Record<string, unknown> = {
           "title": "Campus map",
           "meta": "City Campus · parking & entrances",
           "href": "#",
-          "cta": false
+          "cta": false,
+          "kind": "resource"
         },
         {
           "title": "River Valley Kids registration",
           "meta": "New family registration · City Campus",
           "href": "https://rivervalley.churchcenter.com/people/forms/1195762",
-          "cta": true
+          "cta": false,
+          "kind": "link"
         },
         {
           "title": "River Valley YTH",
           "meta": "Sundays during the 11am service · City",
           "href": "https://rivervalley.churchcenter.com/calendar/event/168866136",
-          "cta": false
+          "cta": false,
+          "kind": "link"
         },
         {
           "title": "Connect Card",
           "meta": "New here? Tell us hello",
           "href": "https://rivervalley.churchcenter.com/people/forms/829230",
-          "cta": true
+          "cta": true,
+          "kind": "cta"
         }
       ]
     },
@@ -334,25 +338,29 @@ export const SEED_JSON: Record<string, unknown> = {
           "title": "Praise",
           "meta": "Elevation Worship · listen / download",
           "href": "#",
-          "cta": false
+          "cta": false,
+          "kind": "song"
         },
         {
           "title": "Goodness of God",
           "meta": "Jenn Johnson · listen / download",
           "href": "#",
-          "cta": false
+          "cta": false,
+          "kind": "song"
         },
         {
           "title": "Graves Into Gardens",
           "meta": "Brandon Lake · listen / download",
           "href": "#",
-          "cta": false
+          "cta": false,
+          "kind": "song"
         },
         {
           "title": "Holy Forever",
           "meta": "Chris Tomlin · listen / download",
           "href": "#",
-          "cta": false
+          "cta": false,
+          "kind": "song"
         }
       ]
     },
@@ -371,25 +379,29 @@ export const SEED_JSON: Record<string, unknown> = {
           "title": "Join a Dream Team",
           "meta": "Serve at River Valley",
           "href": "https://rivervalley.org/serve",
-          "cta": false
+          "cta": false,
+          "kind": "link"
         },
         {
           "title": "Operation Christmas Child & Angel Tree",
           "meta": "Upcoming at City Campus",
           "href": "https://www.rivervalley.org/impact/occ",
-          "cta": false
+          "cta": false,
+          "kind": "link"
         },
         {
           "title": "Christmas Spectacular",
           "meta": "December 4, 5 & 6",
           "href": "https://www.rivervalley.org/events/christmas",
-          "cta": false
+          "cta": false,
+          "kind": "link"
         },
         {
           "title": "Upcoming Global Teams",
           "meta": "Missions & trips",
           "href": "https://rivervalley.org/global-teams/",
-          "cta": false
+          "cta": false,
+          "kind": "link"
         }
       ]
     },
@@ -406,7 +418,8 @@ export const SEED_JSON: Record<string, unknown> = {
           "title": "How to get Involved",
           "meta": "Miracle Offering · next steps",
           "href": "#",
-          "cta": true
+          "cta": true,
+          "kind": "cta"
         }
       ],
       "video": {
@@ -426,8 +439,9 @@ export const SEED_JSON: Record<string, unknown> = {
         {
           "title": "Give",
           "meta": "Support River Valley",
-          "href": "https://rivervalley.org/give",
-          "cta": true
+          "href": "https://give.tithe.ly/?formId=fafea73e-6bdc-48c1-a829-27c407a239c6",
+          "cta": true,
+          "kind": "cta"
         }
       ]
     },
@@ -445,19 +459,22 @@ export const SEED_JSON: Record<string, unknown> = {
           "title": "Sermon notes",
           "meta": "Pastor Rob Ketterling",
           "href": "#",
-          "cta": false
+          "cta": false,
+          "kind": "resource"
         },
         {
           "title": "Scripture reading",
           "meta": "Today's passage",
           "href": "#",
-          "cta": false
+          "cta": false,
+          "kind": "resource"
         },
         {
           "title": "Discussion guide",
           "meta": "For groups this week",
           "href": "#",
-          "cta": false
+          "cta": false,
+          "kind": "resource"
         }
       ]
     },
@@ -466,28 +483,23 @@ export const SEED_JSON: Record<string, unknown> = {
       "label": "Thanks for coming!",
       "desc": "After the blessing—next steps and a smooth exit.",
       "itemIds": [
-        "item_city_parking_map",
         "item_city_small_groups_info",
         "item_city_soap"
       ],
       "links": [
         {
-          "title": "Downtown parking map",
-          "meta": "City Campus · ramps & validation",
-          "href": "#",
-          "cta": false
-        },
-        {
           "title": "Small Groups & Core Groups",
           "meta": "Get connected · City Campus",
           "href": "https://www.rivervalley.org/connect/groups",
-          "cta": false
+          "cta": false,
+          "kind": "link"
         },
         {
           "title": "Daily Bible Reading",
           "meta": "SOAP reading plan",
           "href": "https://rivervalley.org/soap",
-          "cta": false
+          "cta": false,
+          "kind": "resource"
         }
       ]
     }
@@ -766,7 +778,7 @@ export const SEED_JSON: Record<string, unknown> = {
       "title": "River Valley Kids registration",
       "meta": "New family registration · City Campus",
       "href": "https://rivervalley.churchcenter.com/people/forms/1195762",
-      "cta": true,
+      "cta": false,
       "tags": [
         "city",
         "kids",
@@ -1028,7 +1040,7 @@ export const SEED_JSON: Record<string, unknown> = {
       "kind": "cta",
       "title": "Give",
       "meta": "Support River Valley",
-      "href": "https://rivervalley.org/give",
+      "href": "https://give.tithe.ly/?formId=fafea73e-6bdc-48c1-a829-27c407a239c6",
       "cta": true,
       "tags": [
         "city",

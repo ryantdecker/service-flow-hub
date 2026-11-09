@@ -30,7 +30,7 @@
       "title": "River Valley Kids registration",
       "meta": "New family registration · City Campus",
       "href": "https://rivervalley.churchcenter.com/people/forms/1195762",
-      "cta": true,
+      "cta": false,
       "tags": [
         "city",
         "kids",
@@ -292,7 +292,7 @@
       "kind": "cta",
       "title": "Give",
       "meta": "Support River Valley",
-      "href": "https://rivervalley.org/give",
+      "href": "https://give.tithe.ly/?formId=fafea73e-6bdc-48c1-a829-27c407a239c6",
       "cta": true,
       "tags": [
         "city",
