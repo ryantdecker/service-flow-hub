@@ -33,42 +33,52 @@ function stateFor(index: number) {
   return 'upcoming'
 }
 
-const nowLabel = computed(() => {
-  const current = props.event.segments[currentIndex.value]
-  return currentIndex.value === 0
-    ? `Live · ${current?.label ?? 'Welcome'}`
-    : `Now · ${current?.label ?? ''}`
-})
-
 const progressPct = computed(
   () => ((currentIndex.value + 1) / props.event.segments.length) * 100,
 )
+
+/** Prefer “City Campus” style labels when the venue name is just the location. */
+const campusLabel = computed(() => {
+  const name = props.venue.name.trim()
+  if (/campus$/i.test(name)) return name
+  return `${name} Campus`
+})
 </script>
 
 <template>
   <div class="page">
     <header class="hero">
       <h1 class="brand">
-        <img
-          v-if="organization.branding.logoUrl"
-          class="brand-logo"
-          :src="organization.branding.logoUrl"
-          :alt="organization.name"
+        <a
+          v-if="organization.website"
+          class="brand-link"
+          :href="organization.website"
+          target="_blank"
+          rel="noopener noreferrer"
         >
-        <span v-else>{{ organization.name }}</span>
+          <img
+            v-if="organization.branding.logoUrl"
+            class="brand-logo"
+            :src="organization.branding.logoUrl"
+            :alt="organization.name"
+          >
+          <span v-else>{{ organization.name }}</span>
+        </a>
+        <template v-else>
+          <img
+            v-if="organization.branding.logoUrl"
+            class="brand-logo"
+            :src="organization.branding.logoUrl"
+            :alt="organization.name"
+          >
+          <span v-else>{{ organization.name }}</span>
+        </template>
       </h1>
-      <span class="eyebrow">{{ venue.name }}</span>
-      <p class="service-line">
-        <strong>{{ event.title }}</strong>
-      </p>
-      <div class="live-pill">
-        <span class="live-dot" aria-hidden="true" />
-        <span>{{ nowLabel }}</span>
-      </div>
+      <span class="campus">{{ campusLabel }}</span>
     </header>
 
     <div class="rundown-head">
-      <h2>Today's service</h2>
+      <h2>{{ event.title }}</h2>
       <span class="rundown-hint">{{ currentIndex + 1 }} of {{ event.segments.length }}</span>
     </div>
     <div class="progress-track" aria-hidden="true">
@@ -156,70 +166,50 @@ const progressPct = computed(
 
 .hero {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  margin: 0 -1.1rem 0.35rem;
-  padding: 1.35rem 1.25rem 1.25rem;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 -1.1rem 0.25rem;
+  padding: 0.7rem 1.25rem;
   background: #000;
   color: #fff;
 }
 
 .brand {
-  margin: 0 0 0.85rem;
+  margin: 0;
   line-height: 0;
+  min-width: 0;
+}
+
+.brand-link {
+  display: inline-block;
+  line-height: 0;
+  text-decoration: none;
+  color: inherit;
 }
 
 .brand-logo {
   display: block;
-  width: min(100%, 320px);
+  width: min(100%, 148px);
   height: auto;
 }
 
-.eyebrow {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+.campus {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.72);
-  margin-bottom: 0.4rem;
-}
-
-.service-line {
-  text-align: center;
-  font-size: 0.98rem;
-  color: rgba(255, 255, 255, 0.62);
-  font-weight: 600;
-}
-
-.service-line strong {
   color: #fff;
-}
-
-.live-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.95rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 0.4rem 0.7rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-}
-
-.live-dot {
-  width: 0.45rem;
-  height: 0.45rem;
-  border-radius: 50%;
-  background: var(--now);
+  text-align: right;
 }
 
 .rundown-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin: 1.15rem 0 0.75rem;
+  margin: 0.9rem 0 0.65rem;
 }
 
 .rundown-head h2 {

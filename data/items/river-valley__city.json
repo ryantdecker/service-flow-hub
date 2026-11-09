@@ -290,8 +290,8 @@
     {
       "id": "item_city_give",
       "kind": "cta",
-      "title": "Give",
-      "meta": "Support River Valley",
+      "title": "Give Online",
+      "meta": "Secure Giving via Tithe.ly",
       "href": "https://give.tithe.ly/?formId=fafea73e-6bdc-48c1-a829-27c407a239c6",
       "cta": true,
       "tags": [
@@ -299,6 +299,15 @@
         "giving",
         "linktree"
       ]
+    },
+    {
+      "id": "item_mw9kx4p1_o1i9r",
+      "kind": "cta",
+      "title": "Parking Validation",
+      "meta": "Click to validate your ramp parking",
+      "href": "https://app.metropolis.io/sign-in",
+      "cta": true,
+      "tags": []
     }
   ]
 }

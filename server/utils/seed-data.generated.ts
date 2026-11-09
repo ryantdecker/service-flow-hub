@@ -242,7 +242,7 @@ export const SEED_JSON: Record<string, unknown> = {
   "organizationId": "org_river_valley",
   "venueId": "venue_rv_city",
   "slug": "sun-0900",
-  "title": "Sunday 9:00",
+  "title": "Nov. 8, 2026",
   "startsAt": "2026-11-09T09:00:00-06:00",
   "endsAt": "2026-11-09T10:20:00-06:00",
   "status": "live",
@@ -430,15 +430,15 @@ export const SEED_JSON: Record<string, unknown> = {
     },
     {
       "id": "giving",
-      "label": "Giving",
+      "label": "Generosity",
       "desc": "Participate in the offering through Tithe.ly.",
       "itemIds": [
         "item_city_give"
       ],
       "links": [
         {
-          "title": "Give",
-          "meta": "Support River Valley",
+          "title": "Give Online",
+          "meta": "Secure Giving via Tithe.ly",
           "href": "https://give.tithe.ly/?formId=fafea73e-6bdc-48c1-a829-27c407a239c6",
           "cta": true,
           "kind": "cta"
@@ -447,7 +447,7 @@ export const SEED_JSON: Record<string, unknown> = {
     },
     {
       "id": "sermon",
-      "label": "Sermon notes",
+      "label": "Teaching",
       "desc": "Follow along with Pastor Rob Ketterling's message.",
       "itemIds": [
         "item_sermon_notes",
@@ -483,10 +483,18 @@ export const SEED_JSON: Record<string, unknown> = {
       "label": "Thanks for coming!",
       "desc": "After the blessing—next steps and a smooth exit.",
       "itemIds": [
+        "item_mw9kx4p1_o1i9r",
         "item_city_small_groups_info",
         "item_city_soap"
       ],
       "links": [
+        {
+          "title": "Parking Validation",
+          "meta": "Click to validate your ramp parking",
+          "href": "https://app.metropolis.io/sign-in",
+          "cta": true,
+          "kind": "cta"
+        },
         {
           "title": "Small Groups & Core Groups",
           "meta": "Get connected · City Campus",
@@ -504,7 +512,7 @@ export const SEED_JSON: Record<string, unknown> = {
       ]
     }
   ],
-  "systemName": "City Sun 9:00"
+  "systemName": "Nov. 8, 2026 - 9am"
 },
   "events/river-valley__city__wednesday-night.json": {
   "id": "evt_rv_city_wednesday_night",
@@ -1038,8 +1046,8 @@ export const SEED_JSON: Record<string, unknown> = {
     {
       "id": "item_city_give",
       "kind": "cta",
-      "title": "Give",
-      "meta": "Support River Valley",
+      "title": "Give Online",
+      "meta": "Secure Giving via Tithe.ly",
       "href": "https://give.tithe.ly/?formId=fafea73e-6bdc-48c1-a829-27c407a239c6",
       "cta": true,
       "tags": [
@@ -1047,6 +1055,15 @@ export const SEED_JSON: Record<string, unknown> = {
         "giving",
         "linktree"
       ]
+    },
+    {
+      "id": "item_mw9kx4p1_o1i9r",
+      "kind": "cta",
+      "title": "Parking Validation",
+      "meta": "Click to validate your ramp parking",
+      "href": "https://app.metropolis.io/sign-in",
+      "cta": true,
+      "tags": []
     }
   ]
 },
