@@ -1,0 +1,10 @@
+{
+  "id": "venue_rv_tokyo",
+  "organizationId": "org_river_valley",
+  "slug": "tokyo",
+  "name": "Tokyo",
+  "timezone": "Asia/Tokyo",
+  "locationUrl": "https://www.rivervalley.org/locations/tokyo",
+  "serviceTimes": [],
+  "notes": "Service times TBD — confirm on rivervalley.org"
+}

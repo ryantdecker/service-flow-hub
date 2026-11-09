@@ -1,0 +1,14 @@
+{
+  "id": "venue_rv_online",
+  "organizationId": "org_river_valley",
+  "slug": "online",
+  "name": "Online",
+  "timezone": "America/Chicago",
+  "locationUrl": "https://www.rivervalley.org/locations/online",
+  "notes": "Live online experience; on-demand throughout the week.",
+  "serviceTimes": [
+    { "day": "Saturday", "time": "16:00", "label": "4:00 PM CT" },
+    { "day": "Sunday", "time": "09:30", "label": "9:30 AM CT" },
+    { "day": "Sunday", "time": "11:00", "label": "11:00 AM CT" }
+  ]
+}

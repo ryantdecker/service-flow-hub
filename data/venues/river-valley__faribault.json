@@ -1,0 +1,19 @@
+{
+  "id": "venue_rv_faribault",
+  "organizationId": "org_river_valley",
+  "slug": "faribault",
+  "name": "Faribault",
+  "address": {
+    "line1": "722 Ravine St",
+    "city": "Faribault",
+    "region": "MN",
+    "postalCode": "55021",
+    "country": "US"
+  },
+  "timezone": "America/Chicago",
+  "locationUrl": "https://www.rivervalley.org/locations/faribault",
+  "serviceTimes": [
+    { "day": "Sunday", "time": "09:00", "label": "9:00 AM", "notes": "ASL on 1st and 3rd Sundays" },
+    { "day": "Sunday", "time": "11:00", "label": "11:00 AM" }
+  ]
+}

@@ -1,0 +1,52 @@
+:root {
+  --ink: #1a2a28;
+  --ink-muted: #5a6e6b;
+  --ink-faint: #8a9a97;
+  --teal: #1a6b63;
+  --teal-deep: #0d3f3c;
+  --teal-mid: #2a8f84;
+  --teal-soft: #d7ebe7;
+  --now: #c9783a;
+  --now-soft: rgba(201, 120, 58, 0.14);
+  --gray: #eceef0;
+  --gray-wash: #f4f5f6;
+  --white: #fff;
+  --radius: 14px;
+  --font-display: 'Bricolage Grotesque', Georgia, serif;
+  --font-body: 'Nunito Sans', 'Segoe UI', sans-serif;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow: 0 10px 28px rgba(13, 63, 60, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background:
+    radial-gradient(120% 80% at 10% -10%, #e4eceb 0%, transparent 55%),
+    linear-gradient(165deg, var(--gray-wash) 0%, var(--gray) 55%, #e3e6e9 100%);
+  background-attachment: fixed;
+  min-height: 100dvh;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}

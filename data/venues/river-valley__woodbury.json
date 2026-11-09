@@ -1,0 +1,19 @@
+{
+  "id": "venue_rv_woodbury",
+  "organizationId": "org_river_valley",
+  "slug": "woodbury",
+  "name": "Woodbury",
+  "address": {
+    "line1": "7805 Hudson Rd",
+    "city": "Woodbury",
+    "region": "MN",
+    "postalCode": "55125",
+    "country": "US"
+  },
+  "timezone": "America/Chicago",
+  "locationUrl": "https://www.rivervalley.org/locations/woodbury",
+  "serviceTimes": [
+    { "day": "Sunday", "time": "09:00", "label": "9:00 AM" },
+    { "day": "Sunday", "time": "11:00", "label": "11:00 AM" }
+  ]
+}

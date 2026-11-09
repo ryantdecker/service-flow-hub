@@ -1,0 +1,19 @@
+{
+  "id": "venue_rv_minnetrista",
+  "organizationId": "org_river_valley",
+  "slug": "minnetrista",
+  "name": "Minnetrista",
+  "address": {
+    "line1": "5595 Westwood Ave",
+    "city": "Mound",
+    "region": "MN",
+    "postalCode": "55364",
+    "country": "US"
+  },
+  "timezone": "America/Chicago",
+  "locationUrl": "https://www.rivervalley.org/locations/minnetrista",
+  "serviceTimes": [
+    { "day": "Sunday", "time": "09:00", "label": "9:00 AM" },
+    { "day": "Sunday", "time": "10:45", "label": "10:45 AM" }
+  ]
+}

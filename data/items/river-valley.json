@@ -1,0 +1,168 @@
+{
+  "organizationId": "org_river_valley",
+  "items": [
+    {
+      "id": "item_campus_map",
+      "kind": "resource",
+      "title": "Campus map",
+      "meta": "City Campus · parking & entrances",
+      "href": "#",
+      "tags": ["welcome", "city"]
+    },
+    {
+      "id": "item_kids",
+      "kind": "resource",
+      "title": "Kids",
+      "meta": "Check-in · ages & rooms",
+      "href": "#",
+      "tags": ["welcome", "kids"]
+    },
+    {
+      "id": "item_youth",
+      "kind": "resource",
+      "title": "Youth",
+      "meta": "Middle & high school",
+      "href": "#",
+      "tags": ["welcome", "youth"]
+    },
+    {
+      "id": "item_connect_card",
+      "kind": "cta",
+      "title": "Connect card",
+      "meta": "New here? Tell us hello",
+      "href": "#",
+      "tags": ["welcome", "connect"]
+    },
+    {
+      "id": "item_song_praise",
+      "kind": "song",
+      "title": "Praise",
+      "meta": "Elevation Worship · listen / download",
+      "href": "#",
+      "tags": ["worship"]
+    },
+    {
+      "id": "item_song_goodness",
+      "kind": "song",
+      "title": "Goodness of God",
+      "meta": "Jenn Johnson · listen / download",
+      "href": "#",
+      "tags": ["worship"]
+    },
+    {
+      "id": "item_song_graves",
+      "kind": "song",
+      "title": "Graves Into Gardens",
+      "meta": "Brandon Lake · listen / download",
+      "href": "#",
+      "tags": ["worship"]
+    },
+    {
+      "id": "item_song_holy",
+      "kind": "song",
+      "title": "Holy Forever",
+      "meta": "Chris Tomlin · listen / download",
+      "href": "#",
+      "tags": ["worship"]
+    },
+    {
+      "id": "item_events_week",
+      "kind": "link",
+      "title": "This week's events",
+      "meta": "River Valley app",
+      "href": "#",
+      "tags": ["announcements"]
+    },
+    {
+      "id": "item_serve",
+      "kind": "link",
+      "title": "Serve on Sundays",
+      "meta": "Volunteer teams",
+      "href": "#",
+      "tags": ["announcements"]
+    },
+    {
+      "id": "item_gatherings",
+      "kind": "link",
+      "title": "Upcoming gatherings",
+      "meta": "City Campus",
+      "href": "#",
+      "tags": ["announcements"]
+    },
+    {
+      "id": "item_miracle_video",
+      "kind": "video",
+      "title": "Miracle Offering",
+      "meta": "Special video",
+      "href": "#",
+      "caption": "Tap play to re-watch",
+      "embedUrl": "",
+      "tags": ["video", "miracle"]
+    },
+    {
+      "id": "item_miracle_cta",
+      "kind": "cta",
+      "title": "How to get Involved",
+      "meta": "Miracle Offering · next steps",
+      "href": "#",
+      "cta": true,
+      "tags": ["miracle"]
+    },
+    {
+      "id": "item_give_online",
+      "kind": "link",
+      "title": "Give online",
+      "meta": "Tithe.ly · River Valley Church",
+      "href": "#",
+      "tags": ["giving"]
+    },
+    {
+      "id": "item_give_text",
+      "kind": "link",
+      "title": "Text to give",
+      "meta": "Tithe.ly · City Campus",
+      "href": "#",
+      "tags": ["giving"]
+    },
+    {
+      "id": "item_sermon_notes",
+      "kind": "resource",
+      "title": "Sermon notes",
+      "meta": "Pastor Rob Ketterling",
+      "href": "#",
+      "tags": ["sermon"]
+    },
+    {
+      "id": "item_scripture",
+      "kind": "resource",
+      "title": "Scripture reading",
+      "meta": "Today's passage",
+      "href": "#",
+      "tags": ["sermon"]
+    },
+    {
+      "id": "item_discussion",
+      "kind": "resource",
+      "title": "Discussion guide",
+      "meta": "For groups this week",
+      "href": "#",
+      "tags": ["sermon"]
+    },
+    {
+      "id": "item_get_connected",
+      "kind": "cta",
+      "title": "Get connected",
+      "meta": "Groups, serve & next steps",
+      "href": "#",
+      "tags": ["post"]
+    },
+    {
+      "id": "item_parking",
+      "kind": "resource",
+      "title": "Parking validation",
+      "meta": "Scan or show at exit",
+      "href": "#",
+      "tags": ["post"]
+    }
+  ]
+}

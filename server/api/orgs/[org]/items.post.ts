@@ -1,0 +1,34 @@
+export default defineEventHandler(async (event) => {
+  const orgSlug = getRouterParam(event, 'org')
+  if (!orgSlug) throw createError({ statusCode: 400, statusMessage: 'Missing org' })
+
+  const body = await readBody<{
+    id?: string
+    kind?: 'link' | 'song' | 'video' | 'cta' | 'resource'
+    title?: string
+    meta?: string
+    href?: string
+    cta?: boolean
+    caption?: string
+    embedUrl?: string
+    tags?: string[]
+  }>(event)
+
+  if (!body?.title?.trim()) {
+    throw createError({ statusCode: 400, statusMessage: 'title is required' })
+  }
+
+  const library = await upsertLibraryItem(orgSlug, {
+    id: body.id,
+    kind: body.kind,
+    title: body.title.trim(),
+    meta: body.meta,
+    href: body.href,
+    cta: body.cta,
+    caption: body.caption,
+    embedUrl: body.embedUrl,
+    tags: body.tags,
+  })
+  if (!library) throw createError({ statusCode: 404, statusMessage: 'Organization not found' })
+  return library
+})

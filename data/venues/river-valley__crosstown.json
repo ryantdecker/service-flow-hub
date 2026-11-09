@@ -1,0 +1,22 @@
+{
+  "id": "venue_rv_crosstown",
+  "organizationId": "org_river_valley",
+  "slug": "crosstown",
+  "name": "Crosstown",
+  "address": {
+    "line1": "10801 Red Circle Dr.",
+    "city": "Minnetonka",
+    "region": "MN",
+    "postalCode": "55343",
+    "country": "US"
+  },
+  "phone": "952-255-8982",
+  "email": "crosstown@rivervalley.org",
+  "timezone": "America/Chicago",
+  "locationUrl": "https://www.rivervalley.org/locations/crosstown",
+  "serviceTimes": [
+    { "day": "Sunday", "time": "08:00", "label": "8:00 AM" },
+    { "day": "Sunday", "time": "09:30", "label": "9:30 AM" },
+    { "day": "Sunday", "time": "11:00", "label": "11:00 AM" }
+  ]
+}

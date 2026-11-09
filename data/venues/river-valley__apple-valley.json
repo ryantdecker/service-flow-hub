@@ -1,0 +1,23 @@
+{
+  "id": "venue_rv_apple_valley",
+  "organizationId": "org_river_valley",
+  "slug": "apple-valley",
+  "name": "Apple Valley",
+  "address": {
+    "line1": "14898 Energy Way",
+    "city": "Apple Valley",
+    "region": "MN",
+    "postalCode": "55124",
+    "country": "US"
+  },
+  "phone": "952-255-8915",
+  "email": "applevalley@rivervalley.org",
+  "timezone": "America/Chicago",
+  "locationUrl": "https://www.rivervalley.org/locations/apple-valley",
+  "serviceTimes": [
+    { "day": "Saturday", "time": "16:00", "label": "4:00 PM" },
+    { "day": "Sunday", "time": "08:15", "label": "8:15 AM" },
+    { "day": "Sunday", "time": "09:30", "label": "9:30 AM" },
+    { "day": "Sunday", "time": "11:00", "label": "11:00 AM", "notes": "ASL interpretation" }
+  ]
+}

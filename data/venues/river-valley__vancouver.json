@@ -1,0 +1,18 @@
+{
+  "id": "venue_rv_vancouver",
+  "organizationId": "org_river_valley",
+  "slug": "vancouver",
+  "name": "Vancouver",
+  "address": {
+    "line1": "4750 57 St Delta",
+    "city": "Delta",
+    "region": "BC",
+    "postalCode": "V4K 3C9",
+    "country": "CA"
+  },
+  "timezone": "America/Vancouver",
+  "locationUrl": "https://www.rivervalley.org/locations/vancouver",
+  "serviceTimes": [
+    { "day": "Sunday", "time": "10:00", "label": "10:00 AM" }
+  ]
+}

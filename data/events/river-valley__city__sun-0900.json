@@ -1,0 +1,112 @@
+{
+  "id": "evt_rv_city_sun_0900",
+  "organizationId": "org_river_valley",
+  "venueId": "venue_rv_city",
+  "slug": "sun-0900",
+  "title": "Sunday 9:00",
+  "startsAt": "2026-11-09T09:00:00-06:00",
+  "endsAt": "2026-11-09T10:20:00-06:00",
+  "status": "live",
+  "liveState": {
+    "currentSegmentId": "giving",
+    "mode": "override",
+    "updatedAt": "2026-11-08T19:36:21.424Z"
+  },
+  "schedule": [
+    { "segmentId": "welcome", "startsAt": "2026-11-09T08:30:00-06:00" },
+    { "segmentId": "worship", "startsAt": "2026-11-09T09:00:00-06:00" },
+    { "segmentId": "announcements", "startsAt": "2026-11-09T09:25:00-06:00" },
+    { "segmentId": "special-video", "startsAt": "2026-11-09T09:30:00-06:00" },
+    { "segmentId": "giving", "startsAt": "2026-11-09T09:35:00-06:00" },
+    { "segmentId": "sermon", "startsAt": "2026-11-09T09:38:00-06:00" },
+    { "segmentId": "post", "startsAt": "2026-11-09T10:20:00-06:00" }
+  ],
+  "segments": [
+    {
+      "id": "welcome",
+      "label": "Welcome",
+      "desc": "Glad you're here at City Campus—find your way, check in the kids & youth, and say hello.",
+      "itemIds": ["item_campus_map", "item_kids", "item_youth", "item_connect_card"],
+      "links": [
+        { "title": "Campus map", "meta": "City Campus · parking & entrances", "href": "#" },
+        { "title": "Kids", "meta": "Check-in · ages & rooms", "href": "#" },
+        { "title": "Youth", "meta": "Middle & high school", "href": "#" },
+        { "title": "Connect card", "meta": "New here? Tell us hello", "href": "#" }
+      ]
+    },
+    {
+      "id": "worship",
+      "label": "Worship",
+      "desc": "This morning's set—listen or download each song.",
+      "itemIds": ["item_song_praise", "item_song_goodness", "item_song_graves", "item_song_holy"],
+      "links": [
+        { "title": "Praise", "meta": "Elevation Worship · listen / download", "href": "#" },
+        { "title": "Goodness of God", "meta": "Jenn Johnson · listen / download", "href": "#" },
+        { "title": "Graves Into Gardens", "meta": "Brandon Lake · listen / download", "href": "#" },
+        { "title": "Holy Forever", "meta": "Chris Tomlin · listen / download", "href": "#" }
+      ]
+    },
+    {
+      "id": "announcements",
+      "label": "Announcements",
+      "desc": "What's next at River Valley—sign up while it's fresh.",
+      "itemIds": ["item_events_week", "item_serve", "item_gatherings"],
+      "links": [
+        { "title": "This week's events", "meta": "River Valley app", "href": "#" },
+        { "title": "Serve on Sundays", "meta": "Volunteer teams", "href": "#" },
+        { "title": "Upcoming gatherings", "meta": "City Campus", "href": "#" }
+      ]
+    },
+    {
+      "id": "special-video",
+      "label": "Special video",
+      "desc": "Re-watch Miracle Offering, then take a next step.",
+      "itemIds": ["item_miracle_cta"],
+      "videoItemId": "item_miracle_video",
+      "video": {
+        "title": "Miracle Offering",
+        "caption": "Tap play to re-watch",
+        "embedUrl": ""
+      },
+      "links": [
+        {
+          "title": "How to get Involved",
+          "meta": "Miracle Offering · next steps",
+          "href": "#",
+          "cta": true
+        }
+      ]
+    },
+    {
+      "id": "giving",
+      "label": "Giving",
+      "desc": "Participate in the offering through Tithe.ly.",
+      "itemIds": ["item_give_online", "item_give_text"],
+      "links": [
+        { "title": "Give online", "meta": "Tithe.ly · River Valley Church", "href": "#" },
+        { "title": "Text to give", "meta": "Tithe.ly · City Campus", "href": "#" }
+      ]
+    },
+    {
+      "id": "sermon",
+      "label": "Sermon notes",
+      "desc": "Follow along with Pastor Rob Ketterling's message.",
+      "itemIds": ["item_sermon_notes", "item_scripture", "item_discussion"],
+      "links": [
+        { "title": "Sermon notes", "meta": "Pastor Rob Ketterling", "href": "#" },
+        { "title": "Scripture reading", "meta": "Today's passage", "href": "#" },
+        { "title": "Discussion guide", "meta": "For groups this week", "href": "#" }
+      ]
+    },
+    {
+      "id": "post",
+      "label": "Thanks for coming!",
+      "desc": "After the blessing—next steps and a smooth exit.",
+      "itemIds": ["item_get_connected", "item_parking"],
+      "links": [
+        { "title": "Get connected", "meta": "Groups, serve & next steps", "href": "#" },
+        { "title": "Parking validation", "meta": "Scan or show at exit", "href": "#" }
+      ]
+    }
+  ]
+}

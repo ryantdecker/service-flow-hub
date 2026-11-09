@@ -3,9 +3,9 @@
   --teal: #1a6b63;
   --teal-mid: #2a8f84;
   --teal-soft: #d7ebe7;
-  --sand: #f2ebe1;
-  --sand-deep: #e4d8c8;
-  --sand-wash: #faf6f0;
+  --sand: #eceef0;
+  --sand-deep: #dde1e4;
+  --sand-wash: #f4f5f6;
   --ink: #1a2a28;
   --ink-muted: #5a6e6b;
   --ink-faint: #8a9a97;
@@ -33,9 +33,9 @@ body {
   font-family: var(--font-body);
   color: var(--ink);
   background:
-    radial-gradient(120% 80% at 10% -10%, #dff0ec 0%, transparent 55%),
-    radial-gradient(90% 70% at 100% 0%, #f0e4d4 0%, transparent 50%),
-    linear-gradient(165deg, var(--sand-wash) 0%, var(--sand) 45%, #ebe3d6 100%);
+    radial-gradient(120% 80% at 10% -10%, #e4eceb 0%, transparent 55%),
+    radial-gradient(90% 70% at 100% 0%, #e8eaec 0%, transparent 50%),
+    linear-gradient(165deg, var(--sand-wash) 0%, var(--sand) 45%, #e3e6e9 100%);
   background-attachment: fixed;
   min-height: 100dvh;
   line-height: 1.45;

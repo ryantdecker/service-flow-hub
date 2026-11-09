@@ -1,0 +1,17 @@
+{
+  "id": "venue_rv_eswatini",
+  "organizationId": "org_river_valley",
+  "slug": "eswatini",
+  "name": "Eswatini",
+  "address": {
+    "line1": "P.O. Box 7527 Mbekelweni opposite the High School",
+    "city": "Mbekelweni",
+    "region": "Manzini District",
+    "postalCode": "",
+    "country": "SZ"
+  },
+  "timezone": "Africa/Mbabane",
+  "locationUrl": "https://www.rivervalley.org/locations/eswatini",
+  "serviceTimes": [],
+  "notes": "Service times TBD — confirm on rivervalley.org"
+}

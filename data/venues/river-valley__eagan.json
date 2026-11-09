@@ -1,0 +1,23 @@
+{
+  "id": "venue_rv_eagan",
+  "organizationId": "org_river_valley",
+  "slug": "eagan",
+  "name": "Eagan",
+  "address": {
+    "line1": "875 Blue Gentian Rd",
+    "line2": "Suite 100",
+    "city": "Eagan",
+    "region": "MN",
+    "postalCode": "55121",
+    "country": "US"
+  },
+  "phone": "952-255-8988",
+  "email": "eagan@rivervalley.org",
+  "timezone": "America/Chicago",
+  "locationUrl": "https://www.rivervalley.org/locations/eagan",
+  "serviceTimes": [
+    { "day": "Sunday", "time": "08:00", "label": "8:00 AM" },
+    { "day": "Sunday", "time": "09:30", "label": "9:30 AM" },
+    { "day": "Sunday", "time": "11:15", "label": "11:15 AM" }
+  ]
+}

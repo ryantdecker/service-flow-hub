@@ -1,0 +1,13 @@
+{
+  "id": "org_river_valley",
+  "slug": "river-valley",
+  "name": "River Valley Church",
+  "vertical": "church",
+  "pastor": "Pastors Rob & Becca Ketterling",
+  "givingPlatform": "Tithe.ly",
+  "website": "https://www.rivervalley.org",
+  "branding": {
+    "logoUrl": "/river-valley-logo.png",
+    "primaryColor": "#000000"
+  }
+}

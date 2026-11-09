@@ -1,29 +1,32 @@
 # Service Flow Hub
 
-Guest-facing RFID/NFC service hub for a live church service. After a tap, guests land on one curated phone page with the full service order—current segment highlighted, past quieter, upcoming still reachable.
+Nuxt + JSON Phase 0 scaffold for live venue companions (guest) and client admin.
 
-Fictional demo church: **Riverside Community Church · Sunday 9:00**.
+Demo org: **River Valley Church** — campuses and service times stubbed from [rivervalley.org](https://www.rivervalley.org/).
 
-## Run locally
+## Run
 
 ```bash
-cd ~/cursor-ai/service-flow-hub
 npm install
 npm run dev
 ```
 
-Open the URL Vite prints (usually `http://localhost:5173`).
-
-## Scripts
-
-| Command | What it does |
+| Surface | URL |
 | --- | --- |
-| `npm run dev` | Vite dev server with HMR |
-| `npm run build` | Typecheck + production build to `dist/` |
-| `npm run preview` | Serve the production build locally |
+| Home | http://localhost:3001/ (or 3000 if free) |
+| Admin | http://localhost:3001/admin |
+| RV venues | http://localhost:3001/admin/o/river-valley |
+| City guest live | http://localhost:3001/v/river-valley/city |
+| City producer | http://localhost:3001/admin/o/river-valley/v/city/live |
+| Item library | http://localhost:3001/admin/o/river-valley/items |
+| Flow builder | http://localhost:3001/admin/o/river-valley/v/city/e/sun-0900/flow |
 
-## What’s on the page
+River Valley seed includes **15 venues** with service times from rivervalley.org, an **item library**, and City Campus demo event (`sun-0900`).
 
-Segments: Welcome → Worship → Announcements → Giving → Sermon notes → Post service.
+**Builder split:** Item library = create/edit reusable content. Flow builder = group items into segments + set timing.
 
-Default **Now** is **Announcements** (mid-service) so the highlight is obvious. A small footer **Demo** toggle (off by default) lets reviewers scrub prev/next through segments.
+Phone on same Wi‑Fi: `npm run dev -- --host`, then open the Network URL.
+
+## Data
+
+JSON blobs in [`data/`](data/) — see [`data/README.md`](data/README.md). Vite React prototype archived under [`_legacy/vite-demo`](_legacy/vite-demo).

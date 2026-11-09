@@ -1,0 +1,20 @@
+{
+  "id": "venue_rv_chaska",
+  "organizationId": "org_river_valley",
+  "slug": "chaska",
+  "name": "Chaska",
+  "address": {
+    "line1": "6053 US 212",
+    "city": "Chaska",
+    "region": "MN",
+    "postalCode": "55318",
+    "country": "US"
+  },
+  "timezone": "America/Chicago",
+  "locationUrl": "https://www.rivervalley.org/locations/chaska",
+  "serviceTimes": [
+    { "day": "Sunday", "time": "08:15", "label": "8:15 AM" },
+    { "day": "Sunday", "time": "09:30", "label": "9:30 AM" },
+    { "day": "Sunday", "time": "11:00", "label": "11:00 AM" }
+  ]
+}

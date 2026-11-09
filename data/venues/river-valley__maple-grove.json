@@ -1,0 +1,19 @@
+{
+  "id": "venue_rv_maple_grove",
+  "organizationId": "org_river_valley",
+  "slug": "maple-grove",
+  "name": "Maple Grove",
+  "address": {
+    "line1": "15900 Weaver Lake Rd",
+    "city": "Maple Grove",
+    "region": "MN",
+    "postalCode": "55311",
+    "country": "US"
+  },
+  "timezone": "America/Chicago",
+  "locationUrl": "https://www.rivervalley.org/locations/maple-grove",
+  "serviceTimes": [
+    { "day": "Sunday", "time": "08:30", "label": "8:30 AM" },
+    { "day": "Sunday", "time": "10:30", "label": "10:30 AM" }
+  ]
+}

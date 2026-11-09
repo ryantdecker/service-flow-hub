@@ -1,0 +1,19 @@
+{
+  "id": "venue_rv_lakeville",
+  "organizationId": "org_river_valley",
+  "slug": "lakeville",
+  "name": "Lakeville",
+  "address": {
+    "line1": "21135 Jacquard Ave",
+    "city": "Lakeville",
+    "region": "MN",
+    "postalCode": "55044",
+    "country": "US"
+  },
+  "timezone": "America/Chicago",
+  "locationUrl": "https://www.rivervalley.org/locations/lakeville",
+  "serviceTimes": [
+    { "day": "Sunday", "time": "09:00", "label": "9:00 AM" },
+    { "day": "Sunday", "time": "10:30", "label": "10:30 AM" }
+  ]
+}

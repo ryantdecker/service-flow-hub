@@ -1,0 +1,20 @@
+{
+  "id": "venue_rv_city",
+  "organizationId": "org_river_valley",
+  "slug": "city",
+  "name": "City Campus",
+  "address": {
+    "line1": "105 N 1st St.",
+    "city": "Minneapolis",
+    "region": "MN",
+    "postalCode": "55401",
+    "country": "US"
+  },
+  "timezone": "America/Chicago",
+  "locationUrl": "https://www.rivervalley.org/locations/city",
+  "serviceTimes": [
+    { "day": "Sunday", "time": "09:00", "label": "9:00 AM" },
+    { "day": "Sunday", "time": "11:00", "label": "11:00 AM" },
+    { "day": "Monday", "time": "19:00", "label": "7:00 PM" }
+  ]
+}
