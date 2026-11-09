@@ -31,4 +31,4 @@ Phone on same Wi‑Fi: `npm run dev -- --host`, then open the Network URL.
 
 JSON blobs in [`data/`](data/) — see [`data/README.md`](data/README.md). Vite React prototype archived under [`_legacy/vite-demo`](_legacy/vite-demo).
 
-**Vercel note:** seed JSON is bundled into the Nitro server. Admin edits on serverless don’t persist across cold starts; use local `npm run dev` for durable JSON writes until Postgres.
+**Vercel note:** seed JSON is inlined into the Nitro bundle via `npm run prebuild` → `server/utils/seed-data.generated.ts`. Admin edits on serverless don’t persist across cold starts; use local `npm run dev` for durable JSON writes until Postgres.

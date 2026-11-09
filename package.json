@@ -3,6 +3,9 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "generate:seeds": "node scripts/generate-seed-data.mjs",
+    "prebuild": "npm run generate:seeds",
+    "predev": "npm run generate:seeds",
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",

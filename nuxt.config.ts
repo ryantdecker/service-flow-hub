@@ -19,13 +19,5 @@ export default defineNuxtConfig({
   typescript: {
     strict: true,
   },
-  // Bundle JSON seed data into the Nitro server (required for Vercel serverless)
-  nitro: {
-    serverAssets: [
-      {
-        baseName: 'data',
-        dir: './data',
-      },
-    ],
-  },
+  // Seed JSON is inlined via import.meta.glob in server/utils/store.ts (Vercel-safe).
 })
